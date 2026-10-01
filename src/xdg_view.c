@@ -3,6 +3,7 @@
 #include "server.h"
 #include "view.h"
 #include "workspace.h"
+#include "layout.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -28,6 +29,7 @@ static void xdg_toplevel_map(struct wl_listener* listener, void* data) {
     wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
     wl_list_insert(&view->workspace->tiles, &view->link);
 
+    workspace_arrange(view->workspace);
     focus_view(view);
 }
 
@@ -37,8 +39,9 @@ static void xdg_toplevel_unmap(struct wl_listener* listener, void* data) {
     if (view == view->server->cursor->grabbed_view) {
         reset_cursor_mode(view->server->cursor); 
     }
-
+    
     wl_list_remove(&view->link);
+    workspace_arrange(view->workspace);
 } 
 
 static void xdg_toplevel_commit(struct wl_listener* listener, void* data){

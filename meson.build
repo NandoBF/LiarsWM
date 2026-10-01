@@ -8,7 +8,7 @@ add_project_arguments('-DWLR_USE_UNSTABLE', language: 'c')
 incdir = include_directories('include')
 
 executable(
-  'liarswm',
+  'liars',
   'liar.c',
   'src/server.c',
   'src/workspace.c',
@@ -16,6 +16,7 @@ executable(
   'src/xdg_view.c',
   'src/workspace.c',
   'src/view.c',
+  'src/layout.c',
   include_directories : incdir,
   dependencies: [wlroots, wayland_server, xkbcommon]
 )

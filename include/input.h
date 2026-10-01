@@ -11,8 +11,8 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_cursor.h>
@@ -74,6 +74,7 @@ struct liars_keyboard {
 struct liars_seat* create_seat(struct liars_server* server);
 struct liars_keyboard* create_keyboard(struct liars_seat* seat, struct wlr_input_device* device);
 
+struct liars_cursor* create_cursor(struct liars_seat* seat, struct wlr_output_layout* output_layout);
 
 void reset_cursor_mode(struct liars_cursor* cursor);
 

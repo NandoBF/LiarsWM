@@ -1,5 +1,6 @@
 #include "workspace.h"
 #include "server.h"
+#include "layout.h"
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-util.h>
@@ -19,6 +20,7 @@ struct workspace* workspace_create(struct column* col) {
     wl_list_init(&ws->tiles);
     wl_list_init(&ws->floating);
     wl_list_insert(&col->levels, &ws->link);
+    ws->layout = &master_stack_layout;
     return ws;
 } 
 
@@ -38,7 +40,7 @@ struct column* column_get_or_create(struct liars_server* server, struct monitor*
     col->last_level = 0;
     wl_list_insert(&server->columns, &col->link);
 
-    struct workspace* ws = workspace_create(col);
+    workspace_create(col);
     return col;
 }
 
