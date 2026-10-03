@@ -23,15 +23,7 @@ static void spawn(struct liars_server* server, const union keybind_arg* arg) {
 }
 
 static void switch_column(struct liars_server* server, const union keybind_arg* arg) {
-    struct monitor* monitor;
-    struct column* col;
-    wl_list_for_each(monitor, &server->monitors, link) {
-         col = column_get_or_create(server, monitor, arg->s); 
-         if (col) {
-            server->active_workspace = wl_container_of(col->levels.next, (struct workspace*)NULL, link);
-            return;
-         }
-    }
+    switch_to_column(server, arg->s);
 }
 
 static void close_view(struct liars_server* server, const union keybind_arg* arg) {

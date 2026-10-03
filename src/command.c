@@ -24,8 +24,15 @@ void spawn(struct liars_server* server, const char* command) {
     }
 }
 
+void workspace_command(struct liars_server* server, const char* command) {
+    switch_to_column(server, command);
+}
+
+
+
 static const struct command_def commands[] = {
-    { "spawn", spawn }
+    { "spawn", spawn },
+    { "workspace", workspace_command }
 };
 
 const char* handle_command_input(struct liars_server* server, const char* cmd) {

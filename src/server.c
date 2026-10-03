@@ -24,6 +24,29 @@ struct workspace* get_active_workspace(struct liars_server* server) {
     return server->active_workspace; 
 }
 
+void switch_to_column(struct liars_server *server, const char *name) {
+    struct monitor* monitor;
+    struct column* col;
+    wl_list_for_each(monitor, &server->monitors, link) {
+        col = column_get_or_create(server, monitor, name);
+        if (col) {
+            struct workspace* old = server->active_workspace;
+            struct workspace* new = wl_container_of(col->levels.next, (struct workspace*)NULL, link);
+
+            if (old == new) return;
+
+            if (old) wlr_scene_node_set_enabled(&old->tree->node, false);
+            wlr_scene_node_set_enabled(&new->tree->node, true);
+
+            server->active_workspace = new;
+
+            wlr_log(WLR_INFO, "Switched to workspace %s", name);
+            return;
+        }
+    }
+}
+
+
 static void output_destroy(struct wl_listener* listener, void* data){
     struct monitor* monitor = wl_container_of(listener, monitor, destroy);
 
@@ -99,6 +122,7 @@ static void server_new_output(struct wl_listener* listener, void* data) {
         struct column* col = column_get_or_create(server, monitor, "1");
 
         server->active_workspace = wl_container_of(col->levels.next, (struct workspace*)NULL, link);
+        wlr_scene_node_set_enabled(&server->active_workspace->tree->node, true);
     }
 
 

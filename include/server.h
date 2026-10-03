@@ -64,6 +64,9 @@ struct liars_server {
 struct view* desktop_view_at(
         struct liars_server* server, double lx, double ly,
         struct wlr_surface** surface, double* sx, double* sy);
+
+void switch_to_column(struct liars_server* server, const char* name);
+
 void server_run(struct liars_server* server);
 int init_liar_server(struct liars_server* server, enum wlr_log_importance log_level);
 struct workspace* get_active_workspace(struct liars_server* server);
