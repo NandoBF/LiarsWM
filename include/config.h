@@ -1,4 +1,5 @@
 #pragma once
+#include "command.h"
 #include "keybind.h"
 #include "server.h"
 #include "workspace.h"
@@ -6,6 +7,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
+#include <wlr/util/log.h>
 
 #define MODKEY WLR_MODIFIER_CTRL
 
@@ -43,10 +45,16 @@ static void close_view(struct liars_server* server, const union keybind_arg* arg
     wlr_xdg_toplevel_send_close(toplevel);
 }
 
+static void toggle_command_mode(struct liars_server* server, const union keybind_arg* arg) {
+    server->cmd.mode = server->cmd.mode == MODE_NORMAL ?  MODE_COMMAND :  MODE_COMMAND;
+    wlr_log(WLR_DEBUG, "Switched mode.");
+}
+
 
 static const struct keybind keybinds[] = {
     { MODKEY,   XKB_KEY_Return, spawn, { .s = "kitty" } },
-    { MODKEY|WLR_MODIFIER_ALT,   XKB_KEY_q, close_view, { 0 } },
+    { MODKEY|WLR_MODIFIER_ALT,   XKB_KEY_c, close_view, { 0 } },
     { MODKEY,   XKB_KEY_1,  switch_column, { .s = "1" } },
     { MODKEY,   XKB_KEY_2,  switch_column, { .s = "2" } },
+    { MODKEY,   XKB_KEY_t,  toggle_command_mode, { 0 } },
 };

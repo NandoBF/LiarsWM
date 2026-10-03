@@ -14,9 +14,16 @@ executable(
   'src/workspace.c',
   'src/input.c',
   'src/xdg_view.c',
-  'src/workspace.c',
   'src/view.c',
   'src/layout.c',
+  'src/ipc.c',
+  'src/command.c',
   include_directories : incdir,
   dependencies: [wlroots, wayland_server, xkbcommon]
+)
+
+executable(
+  'liarsctl',
+  'src/liarsctl.c',
+  include_directories : incdir,
 )

@@ -19,6 +19,9 @@
 #include <wlr/backend.h>
 #include <wlr/util/log.h>
 #include "input.h"
+#include "command.h"
+
+struct ipc_server;
 
 struct monitor {
     struct wl_list link;
@@ -52,6 +55,9 @@ struct liars_server {
 
     struct wl_list columns;
     struct workspace* active_workspace;
+
+    struct command_state cmd;
+    struct ipc_server* ipc_server;
 };
 
 

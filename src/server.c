@@ -13,6 +13,7 @@
 #include <xkbcommon/xkbcommon.h>
 #include "workspace.h"
 #include "xdg_view.h"
+#include "ipc.h"
 
 
 void server_run(struct liars_server* server) {
@@ -198,6 +199,9 @@ int init_liar_server(struct liars_server* server, enum wlr_log_importance log_le
     wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");
 
     setenv("WAYLAND_DISPLAY", socket, true);
+
+    server->ipc_server = ipc_server_create(server);
+
     
     if (fork() == 0) {
         execl("/usr/bin/kitty", "kitty", (void*)NULL);
