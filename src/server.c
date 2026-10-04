@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -16,6 +17,7 @@
 #include "xdg_view.h"
 #include "ipc.h"
 #include "x11_view.h"
+#include "layer_shell.h"
 
 
 void server_run(struct liars_server* server) {
@@ -203,6 +205,10 @@ int init_liar_server(struct liars_server* server, enum wlr_log_importance log_le
     server->new_xdg_toplevel.notify = server_new_xdg_toplevel;
     wl_signal_add(&server->xdg_shell->events.new_toplevel, &server->new_xdg_toplevel);
 
+    server->layer_shell = wlr_layer_shell_v1_create(server->wl_display, 4);
+    server->new_layer_shell_surface.notify = server_new_layer_shell_surface;
+    wl_signal_add(&server->layer_shell->events.new_surface, &server->new_layer_shell_surface);
+
     //x11
     server->xwayland = wlr_xwayland_create(server->wl_display, wlr_compositor, true);
     if (server->xwayland) {
@@ -212,7 +218,6 @@ int init_liar_server(struct liars_server* server, enum wlr_log_importance log_le
         setenv("DISPLAY", server->xwayland->display_name, true);
     }
 
-    // wlr layer shell
 
     // Seat
     struct liars_seat* seat = create_seat(server);
@@ -242,7 +247,19 @@ int init_liar_server(struct liars_server* server, enum wlr_log_importance log_le
 
     
     if (fork() == 0) {
-        execl("/usr/bin/kitty", "kitty", (void*)NULL);
+        setsid();
+        if (fork() == 0) {
+            int fd = open("/dev/null", O_RDWR);
+            if (fd >= 0) {
+                dup2(fd, STDIN_FILENO);
+                dup2(fd, STDOUT_FILENO);
+                dup2(fd, STDERR_FILENO);
+                close(fd);
+            }
+            execl("/usr/bin/kitty", "kitty", (char*)NULL);
+            _exit(1);
+        }
+        _exit(0);
     }
 
     wlr_log(WLR_DEBUG, "Liar server initiated");

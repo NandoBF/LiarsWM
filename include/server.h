@@ -17,6 +17,7 @@
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/backend.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/util/log.h>
 #include "input.h"
 #include "command.h"
@@ -61,6 +62,9 @@ struct liars_server {
 
     struct wlr_xwayland* xwayland;
     struct wl_listener new_xwayland_surface;
+
+    struct wlr_layer_shell_v1* layer_shell;
+    struct wl_listener new_layer_shell_surface;
 };
 
 

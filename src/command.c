@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <xkbcommon/xkbcommon.h>
 
 
@@ -13,14 +14,25 @@ void spawn(struct liars_server* server, const char* command) {
     if (fork() == 0) {
         setsid();
 
-        sigset_t set;
-        sigemptyset(&set);
-        sigprocmask(SIG_SETMASK, &set, NULL);
+        if (fork() == 0) {
+            sigset_t set;
+            sigemptyset(&set);
+            sigprocmask(SIG_SETMASK, &set, NULL);
 
-        execl("/bin/sh", "/bin/sh", "-c", command, (char*)NULL);
-        
-        wlr_log(WLR_ERROR, "Failed to exec shell for command: %s", command);
-        _exit(1);
+            int fd = open("/dev/null", O_RDWR);
+            if (fd >= 0) {
+                dup2(fd, STDIN_FILENO);
+                dup2(fd, STDOUT_FILENO);
+                dup2(fd, STDERR_FILENO);
+                close(fd);
+            }
+
+            execl("/bin/sh", "/bin/sh", "-c", command, (char*)NULL);
+            
+            wlr_log(WLR_ERROR, "Failed to exec shell for command: %s", command);
+            _exit(1);
+        }
+        _exit(0);
     }
 }
 
