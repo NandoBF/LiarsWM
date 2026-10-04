@@ -8,7 +8,9 @@
 
 static int is_column_name_valid(const char* name) {
     // only allow numbers and letters
-    // TODO: 
+    for (int i = 0; name[i]; i++) {
+        if (name[i] == ' ') return 0;
+    }
     return 1;
 }
 

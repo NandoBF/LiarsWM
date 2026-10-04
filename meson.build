@@ -18,6 +18,7 @@ executable(
   'src/layout.c',
   'src/ipc.c',
   'src/command.c',
+  'src/x11_view.c',
   include_directories : incdir,
   dependencies: [wlroots, wayland_server, xkbcommon]
 )

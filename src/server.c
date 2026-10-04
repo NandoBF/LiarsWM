@@ -1,8 +1,8 @@
 #include "server.h"
 #include "input.h"
 #include "view.h"
-#include "wlr/util/edges.h"
-#include "wlr/util/log.h"
+#include <wlr/util/edges.h>
+#include <wlr/util/log.h>
 #include <bits/time.h>
 #include <stdlib.h>
 #include <time.h>
@@ -11,9 +11,11 @@
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
+#include <wlr/xwayland.h>
 #include "workspace.h"
 #include "xdg_view.h"
 #include "ipc.h"
+#include "x11_view.h"
 
 
 void server_run(struct liars_server* server) {
@@ -183,7 +185,7 @@ int init_liar_server(struct liars_server* server, enum wlr_log_importance log_le
         return 3;
     }
 
-    wlr_compositor_create(server->wl_display, 5, server->renderer);
+    struct wlr_compositor* wlr_compositor = wlr_compositor_create(server->wl_display, 5, server->renderer);
     wlr_subcompositor_create(server->wl_display);
     wlr_data_device_manager_create(server->wl_display);
 
@@ -201,9 +203,21 @@ int init_liar_server(struct liars_server* server, enum wlr_log_importance log_le
     server->new_xdg_toplevel.notify = server_new_xdg_toplevel;
     wl_signal_add(&server->xdg_shell->events.new_toplevel, &server->new_xdg_toplevel);
 
+    //x11
+    server->xwayland = wlr_xwayland_create(server->wl_display, wlr_compositor, true);
+    if (server->xwayland) {
+        server->new_xwayland_surface.notify = server_new_xwayland_surface;
+        wl_signal_add(&server->xwayland->events.new_surface, &server->new_xwayland_surface);
+
+        setenv("DISPLAY", server->xwayland->display_name, true);
+    }
+
+    // wlr layer shell
+
     // Seat
     struct liars_seat* seat = create_seat(server);
     server->seat = seat;
+    wlr_xwayland_set_seat(server->xwayland, seat->seat);
 
     struct liars_cursor* cursor = create_cursor(seat, server->output_layout);
     server->cursor = cursor;

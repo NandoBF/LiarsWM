@@ -58,6 +58,9 @@ struct liars_server {
 
     struct command_state cmd;
     struct ipc_server* ipc_server;
+
+    struct wlr_xwayland* xwayland;
+    struct wl_listener new_xwayland_surface;
 };
 
 
