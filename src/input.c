@@ -1,14 +1,17 @@
 #include "input.h"
 #include "server.h"
 #include "view.h"
+#include "pointer_contraint.h"
 #include "wlr/util/log.h"
-#include "xdg_view.h"
 #include "config.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
+#include "pointer_contraint.h"
 
 void reset_cursor_mode(struct liars_cursor* cursor) {
     cursor->cursor_mode = LIARSWM_CURSOR_PASSTHROUGH;
@@ -100,6 +103,8 @@ struct liars_seat* create_seat(struct liars_server* server) {
 
     seat->new_input.notify = seat_new_input;
     wl_signal_add(&server->backend->events.new_input, &seat->new_input);
+
+    seat->pointer_constraints = create_pointer_constraints(seat);
 
     return seat;
 }
@@ -260,15 +265,27 @@ static void server_cursor_motion(struct wl_listener* listener, void* data) {
     struct liars_cursor* cursor = wl_container_of(listener, cursor, motion);
     struct wlr_pointer_motion_event* event = data;
 
-    wlr_cursor_move(cursor->cursor, &event->pointer->base,
-            event->delta_x, event->delta_y);
+    wlr_relative_pointer_manager_v1_send_relative_motion(
+        cursor->seat->pointer_constraints->relative_pointer_manager,
+        cursor->seat->seat, (uint64_t)event->time_msec * 1000,
+        event->delta_x, event->delta_y, event->unaccel_dx, event->unaccel_dy);
+
+    struct wlr_pointer_constraint_v1* constraint = cursor->seat->pointer_constraints->active_constraint;
+    if (!constraint || constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+        wlr_cursor_move(cursor->cursor, &event->pointer->base,
+                event->delta_x, event->delta_y);
+    }
     process_cursor_motion(cursor, event->time_msec);
 }
 
 static void server_cursor_motion_absolute(struct wl_listener* listener, void* data) {
     struct liars_cursor* cursor = wl_container_of(listener, cursor, motion_absolute);
     struct wlr_pointer_motion_absolute_event* event = data;
-    wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base, event->x, event->y);
+
+    struct wlr_pointer_constraint_v1* constraint = cursor->seat->pointer_constraints->active_constraint;
+    if (!constraint || constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+        wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base, event->x, event->y);
+    }
     process_cursor_motion(cursor, event->time_msec);
 }
 

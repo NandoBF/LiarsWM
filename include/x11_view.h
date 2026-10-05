@@ -12,6 +12,7 @@ struct x11_view {
     struct wl_listener request_configure;
     struct wl_listener associate;
     struct wl_listener dissociate;
+    struct wl_listener grab_focus;
 };
 
 void server_new_xwayland_surface(struct wl_listener* listener, void* data); 

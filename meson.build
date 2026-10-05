@@ -29,6 +29,7 @@ executable(
   'src/command.c',
   'src/x11_view.c',
   'src/layer_view.c',
+  'src/pointer_constraint.c',
   layer_shell_header,
   include_directories : incdir,
   dependencies: [wlroots, wayland_server, xkbcommon]

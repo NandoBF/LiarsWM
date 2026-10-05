@@ -137,6 +137,7 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&view->request_maximize.link);
     wl_list_remove(&view->request_fullscreen.link);
     wl_list_remove(&x11_v->request_configure.link);
+    wl_list_remove(&x11_v->grab_focus.link);
 
     wlr_scene_node_destroy(&view->scene_tree->node);
     free(view); // perhaps a destructor would be better
@@ -208,6 +209,11 @@ static const struct view_impl x11_view_impl = {
 };
 
 
+static void x11_view_grab_focus(struct wl_listener* listener, void* data) {
+    struct x11_view* xv = wl_container_of(listener, xv, grab_focus);
+    focus_view(&xv->base);
+}
+
 static void x11_view_associate(struct wl_listener* listener, void* data) {
     struct x11_view* xv = wl_container_of(listener, xv, associate);
     wl_signal_add(&xv->xsurface->surface->events.map, &xv->base.map);
@@ -251,6 +257,9 @@ void server_new_xwayland_surface(struct wl_listener* listener, void* data) {
 
     xv->request_configure.notify = x11_view_request_configure;
     wl_signal_add(&xsurface->events.request_configure, &xv->request_configure);
+
+    xv->grab_focus.notify = x11_view_grab_focus;
+    wl_signal_add(&xsurface->events.grab_focus, &xv->grab_focus);
 
     wlr_log(WLR_DEBUG, "Started x11 surface");
 }

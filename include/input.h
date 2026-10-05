@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pointer_contraint.h"
 #include "server.h"
 #include "wlr/util/box.h"
 #include "wlr/xcursor.h"
@@ -30,6 +31,7 @@ enum liars_cursor_mode {
 struct liars_seat {
     struct wlr_seat* seat;
     struct liars_server* server;
+    struct pointer_constraints* pointer_constraints;
 
     struct wl_list keyboards;
     struct wl_listener new_input;

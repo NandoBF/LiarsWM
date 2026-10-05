@@ -161,7 +161,6 @@ struct view* desktop_view_at(
 }
 
 
-
 int init_liar_server(struct liars_server* server, enum wlr_log_importance log_level) {
 
     server->wl_display = wl_display_create();

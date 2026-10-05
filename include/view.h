@@ -7,6 +7,7 @@
 #include <wlr/util/box.h>
 
 struct liars_server;
+struct liars_seat;
 struct workspace;
 
 struct view {
@@ -47,4 +48,7 @@ struct view_impl {
     struct wlr_surface* (*get_surface)(struct view* v);
 };
 
+
+bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface);
+bool is_view_focused(struct view* view);
 void focus_view(struct view* view); 
