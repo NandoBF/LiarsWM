@@ -4,32 +4,38 @@
 #include "server.h"
 #include "view.h"
 #include "workspace.h"
+#include "config.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+
 struct xdg_view {
   struct view base;
   struct wlr_xdg_toplevel *toplevel;
+  struct wlr_scene_tree *surface_tree;
   uint32_t pending_configure_serial;
 };
 
 static void xdg_view_set_size(struct view *v, int w, int h) {
   struct xdg_view *xv = (struct xdg_view *)v;
-  xv->pending_configure_serial = wlr_xdg_toplevel_set_size(xv->toplevel, w, h);
+    
+  view_set_borders(v, w, h);
+
+  int view_width = w - (2 * BORDER_WIDTH);
+  int view_height = h - (2 * BORDER_WIDTH);
+
+  if (view_width <= 0) view_width = 1;
+  if (view_height <= 0) view_height = 1;
+
+  xv->pending_configure_serial = wlr_xdg_toplevel_set_size(xv->toplevel, view_width, view_height);
 }
 
 static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   struct view *view = wl_container_of(listener, view, map);
 
-  view->mapped = true;
-  view->workspace = get_active_workspace(view->server);
-  wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
-  wl_list_insert(&view->workspace->tiles, &view->link);
-
-  workspace_arrange(view->workspace);
-  focus_view(view);
+  view_map(view);
 }
 
 static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
@@ -157,9 +163,11 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
   xv->base.server = server;
   toplevel->base->data = xv;
 
-  xv->base.scene_tree =
-      wlr_scene_xdg_surface_create(&server->scene->tree, xv->toplevel->base);
+  xv->base.scene_tree = wlr_scene_tree_create(&server->scene->tree);
   xv->base.scene_tree->node.data = &xv->base;
+
+  xv->surface_tree = wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
+  wlr_scene_node_set_position(&xv->surface_tree->node, BORDER_WIDTH, BORDER_WIDTH);
 
   xv->base.map.notify = xdg_toplevel_map;
   wl_signal_add(&toplevel->base->surface->events.map, &xv->base.map);

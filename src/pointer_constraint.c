@@ -7,6 +7,9 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 
+// TODO: Handle cursor hints
+
+
 void destroy_active_pointer_constraint(struct pointer_constraints* pc) {
     if (pc->active_constraint == NULL) return;
     wlr_pointer_constraint_v1_send_deactivated(pc->active_constraint);

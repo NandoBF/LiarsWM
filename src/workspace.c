@@ -22,7 +22,7 @@ struct workspace* workspace_create(struct column* col) {
     wl_list_init(&ws->tiles);
     wl_list_init(&ws->floating);
     wl_list_insert(&col->levels, &ws->link);
-    ws->layout = &master_stack_layout;
+    ws->layout = &tiling_layout;
     return ws;
 } 
 

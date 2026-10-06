@@ -35,6 +35,8 @@ struct view {
     struct wl_listener set_app_id;
 
     struct wl_listener initial_commit;
+
+    struct wlr_scene_rect* borders[4];
 };
 
 struct view_impl {
@@ -52,3 +54,7 @@ struct view_impl {
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface);
 bool is_view_focused(struct view* view);
 void focus_view(struct view* view); 
+
+
+void view_set_borders(struct view* v, int w, int h);
+void view_map(struct view* view);

@@ -8,6 +8,7 @@
 struct x11_view {
     struct view base;
     struct wlr_xwayland_surface* xsurface;
+    struct wlr_scene_tree* surface_tree;
 
     struct wl_listener request_configure;
     struct wl_listener associate;

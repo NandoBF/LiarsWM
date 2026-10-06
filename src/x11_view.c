@@ -5,6 +5,7 @@
 #include "server.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
+#include "config.h"
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -96,17 +97,13 @@ static void x11_view_map(struct wl_listener* listener, void* data) {
     struct x11_view* x11_v = (struct x11_view *)view; 
 
     view->surface = x11_v->xsurface->surface;
-    view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, view->surface);
+    view->scene_tree = wlr_scene_tree_create(&view->server->scene->tree);
     view->scene_tree->node.data = view;
 
-    // FIX: repeated code in the xdg variant
-    view->mapped = true;
-    view->workspace = get_active_workspace(view->server);
-    wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
-    wl_list_insert(&view->workspace->tiles, &view->link);
+    x11_v->surface_tree = wlr_scene_subsurface_tree_create(view->scene_tree, view->surface);
+    wlr_scene_node_set_position(&x11_v->surface_tree->node, 5, 5);
 
-    workspace_arrange(view->workspace);
-    focus_view(view);
+    view_map(view);
 }
 
 static void x11_view_unmap(struct wl_listener* listener, void* data) {
@@ -188,7 +185,17 @@ static struct wlr_surface* x11_view_get_surface(struct view* v) {
 
 static void x11_view_set_size(struct view* v, int w, int h) {
     struct x11_view* x11_v = (struct x11_view *)v; 
-    wlr_xwayland_surface_configure(x11_v->xsurface, v->scene_tree->node.x, v->scene_tree->node.y, w, h);
+    
+    if (v->borders[0]) {
+        view_set_borders(v, w, h);
+    }
+    int view_width = w - (2 * BORDER_WIDTH);
+    int view_height = h - (2 * BORDER_WIDTH);
+    
+    if (view_width <= 0) view_width = 1;
+    if (view_height <= 0) view_height = 1;
+
+    wlr_xwayland_surface_configure(x11_v->xsurface, v->scene_tree->node.x + BORDER_WIDTH, v->scene_tree->node.y + BORDER_WIDTH, view_width, view_height);
 }
 
 

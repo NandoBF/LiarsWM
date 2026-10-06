@@ -3,6 +3,8 @@
 #include "server.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
+#include "layout.h"
+#include "config.h"
 #include <wayland-util.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 
@@ -19,6 +21,7 @@ bool is_view_focused(struct view* view) {
     struct wlr_surface* focused_surface = view->server->seat->seat->keyboard_state.focused_surface;
     return focused_surface == view->surface;
 }
+
 
 void focus_view(struct view* view) {
     if (view == NULL) {
@@ -64,3 +67,41 @@ void focus_view(struct view* view) {
         wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes, keyboard->num_keycodes, &keyboard->modifiers);
     }
 }
+
+
+static void map_borders(struct view* view) {
+    float color[4] = {0.6, 0.0, 0.0, 1.0};
+    for (int i = 0; i < 4; i++) {
+        view->borders[i] = wlr_scene_rect_create(view->scene_tree, 0, 0, color);
+        wlr_scene_node_lower_to_bottom(&view->borders[i]->node);
+    }
+}
+
+
+void view_set_borders(struct view* v, int w, int h){
+    wlr_scene_rect_set_size(v->borders[0], w, BORDER_WIDTH);
+    wlr_scene_node_set_position(&v->borders[0]->node, 0, 0);
+
+    wlr_scene_rect_set_size(v->borders[1], w, BORDER_WIDTH);
+    wlr_scene_node_set_position(&v->borders[1]->node, 0, h - BORDER_WIDTH);
+
+    wlr_scene_rect_set_size(v->borders[2], BORDER_WIDTH, h);
+    wlr_scene_node_set_position(&v->borders[2]->node, 0, 0);
+
+    wlr_scene_rect_set_size(v->borders[3], BORDER_WIDTH, h);
+    wlr_scene_node_set_position(&v->borders[3]->node, w - BORDER_WIDTH, 0);
+}
+
+
+void view_map(struct view* view) {
+    view->mapped = true;
+    view->workspace = get_active_workspace(view->server);
+    wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
+    wl_list_insert(&view->workspace->tiles, &view->link);
+
+    map_borders(view);
+
+    workspace_arrange(view->workspace);
+    focus_view(view);
+}
+

@@ -10,9 +10,9 @@
 #include <wlr/util/log.h>
 
 #define MODKEY WLR_MODIFIER_CTRL
-
-
-static const char* terminal[] = { "kitty", NULL };
+#define BORDER_WIDTH 5
+#define INNER_GAP 2
+#define OUTER_GAP 5
 
 
 static void spawn(struct liars_server* server, const union keybind_arg* arg) {
