@@ -1,28 +1,32 @@
 #include "layout.h"
+#include "config.h"
 #include "server.h"
 #include "view.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
-#include "config.h"
 #include <wayland-util.h>
 
 void workspace_arrange(struct workspace* ws) {
-    if (!ws->layout || !ws->layout->arrange) return;
+    if (!ws->layout || !ws->layout->arrange)
+        return;
 
     struct monitor* monitor = ws->col->monitor;
     int width = monitor->output->width;
     int height = monitor->output->height;
-    
+
     int edge_offset = OUTER_GAP - (INNER_GAP / 2);
-    
-    ws->layout->arrange(ws, edge_offset, edge_offset, width - (2 * edge_offset), height - (2 * edge_offset), INNER_GAP);
+
+    ws->layout->arrange(ws, edge_offset, edge_offset, width - (2 * edge_offset),
+                        height - (2 * edge_offset), INNER_GAP);
 }
 
-static void layout_master_stack(struct workspace* ws, int x, int y, int width, int height, int inner_gap) {
+static void layout_master_stack(struct workspace* ws, int x, int y, int width,
+                                int height, int inner_gap) {
     int n = wl_list_length(&ws->tiles);
-    if (n == 0) return;
+    if (n == 0)
+        return;
 
-    int master_width = (n==1) ? width : width / 2;
+    int master_width = (n == 1) ? width : width / 2;
     int i = 0;
     struct view* view;
     wl_list_for_each(view, &ws->tiles, link) {
@@ -41,32 +45,36 @@ static void layout_master_stack(struct workspace* ws, int x, int y, int width, i
             view_w = width - master_width;
             view_h = stack_height;
         }
-        
-        wlr_scene_node_set_position(&view->scene_tree->node, view_x + (inner_gap / 2), view_y + (inner_gap / 2));
+
+        wlr_scene_node_set_position(&view->scene_tree->node,
+                                    view_x + (inner_gap / 2),
+                                    view_y + (inner_gap / 2));
         view->impl->set_size(view, view_w - inner_gap, view_h - inner_gap);
-        
+
         i++;
     }
 }
 
-static void layout_tiling(struct workspace* ws, int x, int y, int width, int height, int inner_gap) {
+static void layout_tiling(struct workspace* ws, int x, int y, int width,
+                          int height, int inner_gap) {
     wlr_log(WLR_DEBUG, "Tiling");
     int n = wl_list_length(&ws->tiles);
-    if (n == 0) return;
+    if (n == 0)
+        return;
 
     int current_x = x;
     int current_y = y;
     int current_w = width;
     int current_h = height;
-    
+
     int i = 0;
     struct view* view;
     wl_list_for_each(view, &ws->tiles, link) {
         int w = current_w;
         int h = current_h;
-        
+
         int split_horiz = (current_w > current_h);
-        
+
         if (i < n - 1) {
             if (split_horiz) {
                 w = current_w / 2;
@@ -76,10 +84,12 @@ static void layout_tiling(struct workspace* ws, int x, int y, int width, int hei
                 current_h -= h;
             }
         }
-        
-        wlr_scene_node_set_position(&view->scene_tree->node, current_x + (inner_gap / 2), current_y + (inner_gap / 2));
+
+        wlr_scene_node_set_position(&view->scene_tree->node,
+                                    current_x + (inner_gap / 2),
+                                    current_y + (inner_gap / 2));
         view->impl->set_size(view, w - inner_gap, h - inner_gap);
-        
+
         if (i < n - 1) {
             if (split_horiz) {
                 current_x += w;
@@ -87,7 +97,7 @@ static void layout_tiling(struct workspace* ws, int x, int y, int width, int hei
                 current_y += h;
             }
         }
-        
+
         i++;
     }
 }

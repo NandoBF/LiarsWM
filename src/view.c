@@ -1,27 +1,29 @@
 #include "view.h"
+#include "config.h"
+#include "layout.h"
 #include "pointer_contraint.h"
 #include "server.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
-#include "layout.h"
-#include "config.h"
 #include <wayland-util.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface) {
     struct wlr_surface* focused = seat->seat->keyboard_state.focused_surface;
-    if (!focused || !surface) return false;
-    return wlr_surface_get_root_surface(surface) == wlr_surface_get_root_surface(focused);
+    if (!focused || !surface)
+        return false;
+    return wlr_surface_get_root_surface(surface) ==
+           wlr_surface_get_root_surface(focused);
 }
 
 bool is_view_focused(struct view* view) {
     if (view == NULL) {
         return false;
     }
-    struct wlr_surface* focused_surface = view->server->seat->seat->keyboard_state.focused_surface;
+    struct wlr_surface* focused_surface =
+        view->server->seat->seat->keyboard_state.focused_surface;
     return focused_surface == view->surface;
 }
-
 
 void focus_view(struct view* view) {
     if (view == NULL) {
@@ -38,7 +40,7 @@ void focus_view(struct view* view) {
     }
 
     if (pc->active_constraint) {
-        destroy_active_pointer_constraint(pc); 
+        destroy_active_pointer_constraint(pc);
     }
 
     if (prev_surface) {
@@ -54,20 +56,24 @@ void focus_view(struct view* view) {
     wl_list_remove(&view->link);
     wl_list_insert(&view->workspace->tiles, &view->link);
 
-    struct wlr_pointer_constraint_v1* new_constraint = wlr_pointer_constraints_v1_constraint_for_surface(pc->constraints, surface, seat);
+    struct wlr_pointer_constraint_v1* new_constraint =
+        wlr_pointer_constraints_v1_constraint_for_surface(pc->constraints,
+                                                          surface, seat);
     if (new_constraint) {
         new_active_pointer_constraint(pc, new_constraint);
-        wlr_log(WLR_INFO, "New pointer constraint for: %s", view->impl->get_title(view));
+        wlr_log(WLR_INFO, "New pointer constraint for: %s",
+                view->impl->get_title(view));
     }
 
     view->impl->set_activated(view, true);
-        wlr_log(WLR_INFO, "Focused: %s", view->impl->get_title(view));
+    wlr_log(WLR_INFO, "Focused: %s", view->impl->get_title(view));
 
     if (keyboard != NULL) {
-        wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes, keyboard->num_keycodes, &keyboard->modifiers);
+        wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes,
+                                       keyboard->num_keycodes,
+                                       &keyboard->modifiers);
     }
 }
-
 
 static void map_borders(struct view* view) {
     float color[4] = {0.6, 0.0, 0.0, 1.0};
@@ -77,8 +83,7 @@ static void map_borders(struct view* view) {
     }
 }
 
-
-void view_set_borders(struct view* v, int w, int h){
+void view_set_borders(struct view* v, int w, int h) {
     wlr_scene_rect_set_size(v->borders[0], w, BORDER_WIDTH);
     wlr_scene_node_set_position(&v->borders[0]->node, 0, 0);
 
@@ -92,7 +97,6 @@ void view_set_borders(struct view* v, int w, int h){
     wlr_scene_node_set_position(&v->borders[3]->node, w - BORDER_WIDTH, 0);
 }
 
-
 void view_map(struct view* view) {
     view->mapped = true;
     view->workspace = get_active_workspace(view->server);
@@ -104,4 +108,3 @@ void view_map(struct view* view) {
     workspace_arrange(view->workspace);
     focus_view(view);
 }
-

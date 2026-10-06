@@ -1,23 +1,21 @@
 #include "input.h"
+#include "config.h"
+#include "pointer_contraint.h"
 #include "server.h"
 #include "view.h"
-#include "pointer_contraint.h"
 #include "wlr/util/log.h"
-#include "config.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
-#include <xkbcommon/xkbcommon.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
-#include "pointer_contraint.h"
+#include <xkbcommon/xkbcommon.h>
 
 void reset_cursor_mode(struct liars_cursor* cursor) {
     cursor->cursor_mode = LIARSWM_CURSOR_PASSTHROUGH;
     cursor->grabbed_view = NULL;
 }
-
 
 static void seat_request_cursor(struct wl_listener* listener, void* data) {
     struct liars_seat* seat = wl_container_of(listener, seat, request_cursor);
@@ -27,40 +25,48 @@ static void seat_request_cursor(struct wl_listener* listener, void* data) {
         seat->seat->pointer_state.focused_client;
 
     if (focused_client == event->seat_client) {
-        wlr_cursor_set_surface(seat->server->cursor->cursor, event->surface, event->hotspot_x, event->hotspot_y);
+        wlr_cursor_set_surface(seat->server->cursor->cursor, event->surface,
+                               event->hotspot_x, event->hotspot_y);
     }
 }
 
-static void seat_pointer_focus_change(struct wl_listener* listener, void* data) {
-    struct liars_seat* seat = wl_container_of(listener, seat, pointer_focus_change);
+static void seat_pointer_focus_change(struct wl_listener* listener,
+                                      void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, pointer_focus_change);
     struct liars_cursor* cursor = seat->server->cursor;
 
     struct wlr_seat_pointer_focus_change_event* event = data;
     if (event->new_surface == NULL) {
-        wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");
+        wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager,
+                               "default");
     }
 }
 
-static void seat_request_set_selection(struct wl_listener* listener, void* data) {
-    struct liars_seat* seat = wl_container_of(listener, seat, request_set_selection);
+static void seat_request_set_selection(struct wl_listener* listener,
+                                       void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, request_set_selection);
     struct wlr_seat_request_set_selection_event* event = data;
     wlr_seat_set_selection(seat->seat, event->source, event->serial);
 }
 
-static void seat_new_keyboard(struct liars_seat* seat, struct wlr_input_device* device) {
+static void seat_new_keyboard(struct liars_seat* seat,
+                              struct wlr_input_device* device) {
 
-    struct liars_keyboard* keyboard = create_keyboard(seat, device); 
+    struct liars_keyboard* keyboard = create_keyboard(seat, device);
 
     struct xkb_context* context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-    struct xkb_keymap* keymap = xkb_keymap_new_from_names(context, NULL,
-            XKB_KEYMAP_COMPILE_NO_FLAGS);
+    struct xkb_keymap* keymap =
+        xkb_keymap_new_from_names(context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
     wlr_keyboard_set_keymap(keyboard->wlr_keyboard, keymap);
     xkb_keymap_unref(keymap);
     xkb_context_unref(context);
     wlr_keyboard_set_repeat_info(keyboard->wlr_keyboard, 25, 600);
 }
 
-static void seat_new_pointer(struct liars_cursor* cursor, struct wlr_input_device* device) {
+static void seat_new_pointer(struct liars_cursor* cursor,
+                             struct wlr_input_device* device) {
     wlr_cursor_attach_input_device(cursor->cursor, device);
 }
 
@@ -69,14 +75,14 @@ static void seat_new_input(struct wl_listener* listener, void* data) {
     struct liars_server* server = seat->server;
     struct wlr_input_device* device = data;
     switch (device->type) {
-        case WLR_INPUT_DEVICE_KEYBOARD:
-            seat_new_keyboard(seat, device);
-            break;
-        case WLR_INPUT_DEVICE_POINTER:
-            seat_new_pointer(server->cursor, device);
-            break;
-        default:
-            break;
+    case WLR_INPUT_DEVICE_KEYBOARD:
+        seat_new_keyboard(seat, device);
+        break;
+    case WLR_INPUT_DEVICE_POINTER:
+        seat_new_pointer(server->cursor, device);
+        break;
+    default:
+        break;
     }
 
     uint32_t caps = WL_SEAT_CAPABILITY_POINTER;
@@ -87,19 +93,22 @@ static void seat_new_input(struct wl_listener* listener, void* data) {
 }
 
 struct liars_seat* create_seat(struct liars_server* server) {
-    struct liars_seat* seat = calloc(1, sizeof(*seat)); 
+    struct liars_seat* seat = calloc(1, sizeof(*seat));
     seat->server = server;
     seat->seat = wlr_seat_create(server->wl_display, "seat0");
     wl_list_init(&seat->keyboards);
 
     seat->request_cursor.notify = seat_request_cursor;
-    wl_signal_add(&seat->seat->events.request_set_cursor, &seat->request_cursor);
+    wl_signal_add(&seat->seat->events.request_set_cursor,
+                  &seat->request_cursor);
 
     seat->pointer_focus_change.notify = seat_pointer_focus_change;
-    wl_signal_add(&seat->seat->pointer_state.events.focus_change, &seat->pointer_focus_change);
+    wl_signal_add(&seat->seat->pointer_state.events.focus_change,
+                  &seat->pointer_focus_change);
 
     seat->request_set_selection.notify = seat_request_set_selection;
-    wl_signal_add(&seat->seat->events.request_set_selection, &seat->request_set_selection);
+    wl_signal_add(&seat->seat->events.request_set_selection,
+                  &seat->request_set_selection);
 
     seat->new_input.notify = seat_new_input;
     wl_signal_add(&server->backend->events.new_input, &seat->new_input);
@@ -109,18 +118,18 @@ struct liars_seat* create_seat(struct liars_server* server) {
     return seat;
 }
 
-
-static void keyboard_handle_modifiers(
-        struct wl_listener* listener, void* data) {
-    struct liars_keyboard* keyboard = wl_container_of(listener, keyboard, modifiers);
+static void keyboard_handle_modifiers(struct wl_listener* listener,
+                                      void* data) {
+    struct liars_keyboard* keyboard =
+        wl_container_of(listener, keyboard, modifiers);
 
     wlr_seat_set_keyboard(keyboard->seat->seat, keyboard->wlr_keyboard);
-    wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->wlr_keyboard->modifiers);
+    wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat,
+                                       &keyboard->wlr_keyboard->modifiers);
 }
 
 static void keyboard_handle_key(struct wl_listener* listener, void* data) {
-    struct liars_keyboard* keyboard =
-        wl_container_of(listener, keyboard, key);
+    struct liars_keyboard* keyboard = wl_container_of(listener, keyboard, key);
     struct liars_seat* seat = keyboard->seat;
     struct liars_server* server = seat->server;
     struct wlr_keyboard_key_event* event = data;
@@ -128,11 +137,12 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
     uint32_t keycode = event->keycode + 8;
 
     const xkb_keysym_t* syms;
-    int nsyms = xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state, keycode, &syms);
+    int nsyms = xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state,
+                                       keycode, &syms);
     bool handled = false;
     uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
     for (int i = 0; i < nsyms; i++) {
-        for (size_t k = 0; k < sizeof(keybinds)/sizeof(keybinds[0]); k++) {
+        for (size_t k = 0; k < sizeof(keybinds) / sizeof(keybinds[0]); k++) {
             if (modifiers == keybinds[k].modifiers &&
                 syms[i] == keybinds[k].keysym &&
                 event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
@@ -145,12 +155,14 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
 
     if (!handled) {
         wlr_seat_set_keyboard(seat->seat, keyboard->wlr_keyboard);
-        wlr_seat_keyboard_notify_key(seat->seat, event->time_msec, event->keycode, event->state);
+        wlr_seat_keyboard_notify_key(seat->seat, event->time_msec,
+                                     event->keycode, event->state);
     }
 }
 
 static void keyboard_handle_destroy(struct wl_listener* listener, void* data) {
-    struct liars_keyboard* keyboard = wl_container_of(listener, keyboard, destroy);
+    struct liars_keyboard* keyboard =
+        wl_container_of(listener, keyboard, destroy);
     wl_list_remove(&keyboard->modifiers.link);
     wl_list_remove(&keyboard->key.link);
     wl_list_remove(&keyboard->destroy.link);
@@ -158,14 +170,15 @@ static void keyboard_handle_destroy(struct wl_listener* listener, void* data) {
     free(keyboard);
 }
 
-struct liars_keyboard* create_keyboard(struct liars_seat* seat, struct wlr_input_device* device) {
+struct liars_keyboard* create_keyboard(struct liars_seat* seat,
+                                       struct wlr_input_device* device) {
     struct liars_keyboard* keyboard = calloc(1, sizeof(*keyboard));
     struct wlr_keyboard* wlr_k = wlr_keyboard_from_input_device(device);
 
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_k;
 
-    keyboard->modifiers.notify = keyboard_handle_modifiers; 
+    keyboard->modifiers.notify = keyboard_handle_modifiers;
     wl_signal_add(&wlr_k->events.modifiers, &keyboard->modifiers);
 
     keyboard->key.notify = keyboard_handle_key;
@@ -180,14 +193,13 @@ struct liars_keyboard* create_keyboard(struct liars_seat* seat, struct wlr_input
     return keyboard;
 }
 
-
 // Cursor
 
 static void process_cursor_move(struct liars_cursor* cursor) {
     struct view* view = cursor->grabbed_view;
-    wlr_scene_node_set_position(&view->scene_tree->node, 
-            cursor->cursor->x - cursor->grab_x, 
-            cursor->cursor->y - cursor->grab_y);
+    wlr_scene_node_set_position(&view->scene_tree->node,
+                                cursor->cursor->x - cursor->grab_x,
+                                cursor->cursor->y - cursor->grab_y);
 }
 
 static void process_cursor_resize(struct liars_cursor* cursor) {
@@ -199,39 +211,37 @@ static void process_cursor_resize(struct liars_cursor* cursor) {
     int new_top = cursor->grab_geobox.y;
     int new_bottom = cursor->grab_geobox.y + cursor->grab_geobox.height;
 
-	if (cursor->resize_edges & WLR_EDGE_TOP) {
-		new_top = border_y;
-		if (new_top >= new_bottom) {
-			new_top = new_bottom - 1;
-		}
-	} else if (cursor->resize_edges & WLR_EDGE_BOTTOM) {
-		new_bottom = border_y;
-		if (new_bottom <= new_top) {
-			new_bottom = new_top + 1;
-		}
-	}
-	if (cursor->resize_edges & WLR_EDGE_LEFT) {
-		new_left = border_x;
-		if (new_left >= new_right) {
-			new_left = new_right - 1;
-		}
-	} else if (cursor->resize_edges & WLR_EDGE_RIGHT) {
-		new_right = border_x;
-		if (new_right <= new_left) {
-			new_right = new_left + 1;
-		}
-	}
+    if (cursor->resize_edges & WLR_EDGE_TOP) {
+        new_top = border_y;
+        if (new_top >= new_bottom) {
+            new_top = new_bottom - 1;
+        }
+    } else if (cursor->resize_edges & WLR_EDGE_BOTTOM) {
+        new_bottom = border_y;
+        if (new_bottom <= new_top) {
+            new_bottom = new_top + 1;
+        }
+    }
+    if (cursor->resize_edges & WLR_EDGE_LEFT) {
+        new_left = border_x;
+        if (new_left >= new_right) {
+            new_left = new_right - 1;
+        }
+    } else if (cursor->resize_edges & WLR_EDGE_RIGHT) {
+        new_right = border_x;
+        if (new_right <= new_left) {
+            new_right = new_left + 1;
+        }
+    }
 
     struct wlr_box geo_box;
     view->impl->get_geometry(view, &geo_box);
-    wlr_scene_node_set_position(&view->scene_tree->node, 
-            new_left - geo_box.x,
-            new_top - geo_box.y);
+    wlr_scene_node_set_position(&view->scene_tree->node, new_left - geo_box.x,
+                                new_top - geo_box.y);
 
     int new_width = new_right - new_left;
     int new_height = new_bottom - new_top;
     view->impl->set_size(view, new_width, new_height);
-
 }
 
 static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
@@ -246,11 +256,12 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
     double sx, sy;
     struct wlr_seat* seat = cursor->seat->seat;
     struct wlr_surface* surface = NULL;
-    struct view* view = desktop_view_at(cursor->seat->server, 
-            cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
+    struct view* view = desktop_view_at(cursor->seat->server, cursor->cursor->x,
+                                        cursor->cursor->y, &surface, &sx, &sy);
 
     if (!view) {
-        wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");
+        wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager,
+                               "default");
     }
 
     if (surface) {
@@ -267,24 +278,29 @@ static void server_cursor_motion(struct wl_listener* listener, void* data) {
 
     wlr_relative_pointer_manager_v1_send_relative_motion(
         cursor->seat->pointer_constraints->relative_pointer_manager,
-        cursor->seat->seat, (uint64_t)event->time_msec * 1000,
-        event->delta_x, event->delta_y, event->unaccel_dx, event->unaccel_dy);
+        cursor->seat->seat, (uint64_t)event->time_msec * 1000, event->delta_x,
+        event->delta_y, event->unaccel_dx, event->unaccel_dy);
 
-    struct wlr_pointer_constraint_v1* constraint = cursor->seat->pointer_constraints->active_constraint;
+    struct wlr_pointer_constraint_v1* constraint =
+        cursor->seat->pointer_constraints->active_constraint;
     if (!constraint || constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
-        wlr_cursor_move(cursor->cursor, &event->pointer->base,
-                event->delta_x, event->delta_y);
+        wlr_cursor_move(cursor->cursor, &event->pointer->base, event->delta_x,
+                        event->delta_y);
     }
     process_cursor_motion(cursor, event->time_msec);
 }
 
-static void server_cursor_motion_absolute(struct wl_listener* listener, void* data) {
-    struct liars_cursor* cursor = wl_container_of(listener, cursor, motion_absolute);
+static void server_cursor_motion_absolute(struct wl_listener* listener,
+                                          void* data) {
+    struct liars_cursor* cursor =
+        wl_container_of(listener, cursor, motion_absolute);
     struct wlr_pointer_motion_absolute_event* event = data;
 
-    struct wlr_pointer_constraint_v1* constraint = cursor->seat->pointer_constraints->active_constraint;
+    struct wlr_pointer_constraint_v1* constraint =
+        cursor->seat->pointer_constraints->active_constraint;
     if (!constraint || constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
-        wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base, event->x, event->y);
+        wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base,
+                                 event->x, event->y);
     }
     process_cursor_motion(cursor, event->time_msec);
 }
@@ -294,13 +310,15 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
     struct liars_server* server = cursor->seat->server;
     struct wlr_pointer_button_event* event = data;
 
-    wlr_seat_pointer_notify_button(cursor->seat->seat, event->time_msec, event->button, event->state);
+    wlr_seat_pointer_notify_button(cursor->seat->seat, event->time_msec,
+                                   event->button, event->state);
     if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
         reset_cursor_mode(cursor);
     } else {
         double sx, sy;
         struct wlr_surface* surface = NULL;
-        struct view* view = desktop_view_at(server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
+        struct view* view = desktop_view_at(
+            server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
         focus_view(view);
     }
 }
@@ -309,9 +327,9 @@ static void server_cursor_axis(struct wl_listener* listener, void* data) {
     struct liars_cursor* cursor = wl_container_of(listener, cursor, axis);
     struct wlr_pointer_axis_event* event = data;
 
-    wlr_seat_pointer_notify_axis(cursor->seat->seat,
-            event->time_msec, event->orientation, event->delta,
-            event->delta_discrete, event->source, event->relative_direction);
+    wlr_seat_pointer_notify_axis(
+        cursor->seat->seat, event->time_msec, event->orientation, event->delta,
+        event->delta_discrete, event->source, event->relative_direction);
 }
 
 static void server_cursor_frame(struct wl_listener* listener, void* data) {
@@ -319,7 +337,8 @@ static void server_cursor_frame(struct wl_listener* listener, void* data) {
     wlr_seat_pointer_notify_frame(cursor->seat->seat);
 }
 
-struct liars_cursor* create_cursor(struct liars_seat* seat, struct wlr_output_layout* output_layout) {
+struct liars_cursor* create_cursor(struct liars_seat* seat,
+                                   struct wlr_output_layout* output_layout) {
     struct liars_cursor* cursor = calloc(1, sizeof(*cursor));
     cursor->seat = seat;
     cursor->cursor = wlr_cursor_create();
@@ -332,19 +351,17 @@ struct liars_cursor* create_cursor(struct liars_seat* seat, struct wlr_output_la
     wl_signal_add(&cursor->cursor->events.motion, &cursor->motion);
 
     cursor->motion_absolute.notify = server_cursor_motion_absolute;
-    wl_signal_add(&cursor->cursor->events.motion_absolute, &cursor->motion_absolute);
+    wl_signal_add(&cursor->cursor->events.motion_absolute,
+                  &cursor->motion_absolute);
 
     cursor->button.notify = server_cursor_button;
     wl_signal_add(&cursor->cursor->events.button, &cursor->button);
 
-	cursor->axis.notify = server_cursor_axis;
-	wl_signal_add(&cursor->cursor->events.axis, &cursor->axis);
+    cursor->axis.notify = server_cursor_axis;
+    wl_signal_add(&cursor->cursor->events.axis, &cursor->axis);
 
-	cursor->frame.notify = server_cursor_frame;
-	wl_signal_add(&cursor->cursor->events.frame, &cursor->frame);
+    cursor->frame.notify = server_cursor_frame;
+    wl_signal_add(&cursor->cursor->events.frame, &cursor->frame);
 
     return cursor;
 }
-
-
-

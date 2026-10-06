@@ -1,140 +1,142 @@
 #include "xdg_view.h"
+#include "config.h"
 #include "input.h"
 #include "layout.h"
 #include "server.h"
 #include "view.h"
 #include "workspace.h"
-#include "config.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
-
 struct xdg_view {
-  struct view base;
-  struct wlr_xdg_toplevel *toplevel;
-  struct wlr_scene_tree *surface_tree;
-  uint32_t pending_configure_serial;
+    struct view base;
+    struct wlr_xdg_toplevel* toplevel;
+    struct wlr_scene_tree* surface_tree;
+    uint32_t pending_configure_serial;
 };
 
-static void xdg_view_set_size(struct view *v, int w, int h) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-    
-  view_set_borders(v, w, h);
+static void xdg_view_set_size(struct view* v, int w, int h) {
+    struct xdg_view* xv = (struct xdg_view*)v;
 
-  int view_width = w - (2 * BORDER_WIDTH);
-  int view_height = h - (2 * BORDER_WIDTH);
+    view_set_borders(v, w, h);
 
-  if (view_width <= 0) view_width = 1;
-  if (view_height <= 0) view_height = 1;
+    int view_width = w - (2 * BORDER_WIDTH);
+    int view_height = h - (2 * BORDER_WIDTH);
 
-  xv->pending_configure_serial = wlr_xdg_toplevel_set_size(xv->toplevel, view_width, view_height);
+    if (view_width <= 0)
+        view_width = 1;
+    if (view_height <= 0)
+        view_height = 1;
+
+    xv->pending_configure_serial =
+        wlr_xdg_toplevel_set_size(xv->toplevel, view_width, view_height);
 }
 
-static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
-  struct view *view = wl_container_of(listener, view, map);
+static void xdg_toplevel_map(struct wl_listener* listener, void* data) {
+    struct view* view = wl_container_of(listener, view, map);
 
-  view_map(view);
+    view_map(view);
 }
 
-static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
-  struct view *view = wl_container_of(listener, view, unmap);
+static void xdg_toplevel_unmap(struct wl_listener* listener, void* data) {
+    struct view* view = wl_container_of(listener, view, unmap);
 
-  if (view == view->server->cursor->grabbed_view) {
-    reset_cursor_mode(view->server->cursor);
-  }
-  struct wlr_seat *seat = view->server->seat->seat;
-  if (seat->keyboard_state.focused_surface == view->impl->get_surface(view)) {
-    wlr_seat_keyboard_clear_focus(seat);
-  }
+    if (view == view->server->cursor->grabbed_view) {
+        reset_cursor_mode(view->server->cursor);
+    }
+    struct wlr_seat* seat = view->server->seat->seat;
+    if (seat->keyboard_state.focused_surface == view->impl->get_surface(view)) {
+        wlr_seat_keyboard_clear_focus(seat);
+    }
 
-  wl_list_remove(&view->link);
-  workspace_arrange(view->workspace);
+    wl_list_remove(&view->link);
+    workspace_arrange(view->workspace);
 }
 
-static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
-  struct view *view = wl_container_of(listener, view, commit);
-  struct xdg_view *xv = (struct xdg_view *)view;
+static void xdg_toplevel_commit(struct wl_listener* listener, void* data) {
+    struct view* view = wl_container_of(listener, view, commit);
+    struct xdg_view* xv = (struct xdg_view*)view;
 
-  if (xv->toplevel->base->initial_commit) {
-    wlr_xdg_toplevel_set_size(xv->toplevel, 0, 0);
-  }
+    if (xv->toplevel->base->initial_commit) {
+        wlr_xdg_toplevel_set_size(xv->toplevel, 0, 0);
+    }
 }
 
-static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
-  struct view *view = wl_container_of(listener, view, destroy);
+static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
+    struct view* view = wl_container_of(listener, view, destroy);
 
-  wl_list_remove(&view->map.link);
-  wl_list_remove(&view->unmap.link);
-  wl_list_remove(&view->commit.link);
-  wl_list_remove(&view->destroy.link);
-  wl_list_remove(&view->request_move.link);
-  wl_list_remove(&view->request_resize.link);
-  wl_list_remove(&view->request_maximize.link);
-  wl_list_remove(&view->request_fullscreen.link);
+    wl_list_remove(&view->map.link);
+    wl_list_remove(&view->unmap.link);
+    wl_list_remove(&view->commit.link);
+    wl_list_remove(&view->destroy.link);
+    wl_list_remove(&view->request_move.link);
+    wl_list_remove(&view->request_resize.link);
+    wl_list_remove(&view->request_maximize.link);
+    wl_list_remove(&view->request_fullscreen.link);
 
-  wlr_scene_node_destroy(&view->scene_tree->node);
-  free(view); // perhaps a destructor would be better
+    wlr_scene_node_destroy(&view->scene_tree->node);
+    free(view); // perhaps a destructor would be better
 }
 
-static void xdg_toplevel_request_move(struct wl_listener *listener,
-                                      void *data) {
-  struct view *view = wl_container_of(listener, view, request_move);
-  // begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
-  //  TODO:
+static void xdg_toplevel_request_move(struct wl_listener* listener,
+                                      void* data) {
+    struct view* view = wl_container_of(listener, view, request_move);
+    // begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
+    //  TODO:
 }
 
-static void xdg_toplevel_request_resize(struct wl_listener *listener,
-                                        void *data) {
-  // TODO:
+static void xdg_toplevel_request_resize(struct wl_listener* listener,
+                                        void* data) {
+    // TODO:
 }
 
-static void xdg_toplevel_request_maximize(struct wl_listener *listener,
-                                          void *data) {
-  // TODO:
+static void xdg_toplevel_request_maximize(struct wl_listener* listener,
+                                          void* data) {
+    // TODO:
 }
 
-static void xdg_toplevel_request_fullscreen(struct wl_listener *listener,
-                                            void *data) {
-  // TODO:
+static void xdg_toplevel_request_fullscreen(struct wl_listener* listener,
+                                            void* data) {
+    // TODO:
 }
 
 // IMPL
 
-static void xdg_view_get_geometry(struct view *v, struct wlr_box *box) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  *box = xv->toplevel->base->geometry;
+static void xdg_view_get_geometry(struct view* v, struct wlr_box* box) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    *box = xv->toplevel->base->geometry;
 }
 
-static void xdg_view_set_activated(struct view *v, bool activated) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  wlr_xdg_toplevel_set_activated(xv->toplevel, activated);
+static void xdg_view_set_activated(struct view* v, bool activated) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    wlr_xdg_toplevel_set_activated(xv->toplevel, activated);
 }
 
-static void xdg_view_close(struct view *v) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  wlr_xdg_toplevel_send_close(xv->toplevel);
+static void xdg_view_close(struct view* v) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    wlr_xdg_toplevel_send_close(xv->toplevel);
 }
 
-static const char *xdg_view_get_title(struct view *v) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  return xv->toplevel->title;
+static const char* xdg_view_get_title(struct view* v) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    return xv->toplevel->title;
 }
 
-static const char *xdg_view_get_app_id(struct view *v) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  return xv->toplevel->app_id;
+static const char* xdg_view_get_app_id(struct view* v) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    return xv->toplevel->app_id;
 }
 
-static bool xdg_view_want_fullscreen(struct view *v) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  return xv->toplevel->requested.fullscreen == true;
+static bool xdg_view_want_fullscreen(struct view* v) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    return xv->toplevel->requested.fullscreen == true;
 }
 
-static struct wlr_surface *xdg_view_get_surface(struct view *v) {
-  struct xdg_view *xv = (struct xdg_view *)v;
-  return xv->toplevel->base->surface;
+static struct wlr_surface* xdg_view_get_surface(struct view* v) {
+    struct xdg_view* xv = (struct xdg_view*)v;
+    return xv->toplevel->base->surface;
 }
 
 static const struct view_impl xdg_view_impl = {
@@ -150,47 +152,50 @@ static const struct view_impl xdg_view_impl = {
 
 //
 
-void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
-  struct wlr_xdg_toplevel *toplevel = data;
-  struct liars_server *server =
-      wl_container_of(listener, server, new_xdg_toplevel);
+void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
+    struct wlr_xdg_toplevel* toplevel = data;
+    struct liars_server* server =
+        wl_container_of(listener, server, new_xdg_toplevel);
 
-  struct xdg_view *xv = calloc(1, sizeof(*xv));
-  wl_list_init(&xv->base.link);
-  xv->toplevel = toplevel;
-  xv->base.impl = &xdg_view_impl;
-  xv->base.surface = toplevel->base->surface;
-  xv->base.server = server;
-  toplevel->base->data = xv;
+    struct xdg_view* xv = calloc(1, sizeof(*xv));
+    wl_list_init(&xv->base.link);
+    xv->toplevel = toplevel;
+    xv->base.impl = &xdg_view_impl;
+    xv->base.surface = toplevel->base->surface;
+    xv->base.server = server;
+    toplevel->base->data = xv;
 
-  xv->base.scene_tree = wlr_scene_tree_create(&server->scene->tree);
-  xv->base.scene_tree->node.data = &xv->base;
+    xv->base.scene_tree = wlr_scene_tree_create(&server->scene->tree);
+    xv->base.scene_tree->node.data = &xv->base;
 
-  xv->surface_tree = wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
-  wlr_scene_node_set_position(&xv->surface_tree->node, BORDER_WIDTH, BORDER_WIDTH);
+    xv->surface_tree =
+        wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
+    wlr_scene_node_set_position(&xv->surface_tree->node, BORDER_WIDTH,
+                                BORDER_WIDTH);
 
-  xv->base.map.notify = xdg_toplevel_map;
-  wl_signal_add(&toplevel->base->surface->events.map, &xv->base.map);
+    xv->base.map.notify = xdg_toplevel_map;
+    wl_signal_add(&toplevel->base->surface->events.map, &xv->base.map);
 
-  xv->base.unmap.notify = xdg_toplevel_unmap;
-  wl_signal_add(&toplevel->base->surface->events.unmap, &xv->base.unmap);
+    xv->base.unmap.notify = xdg_toplevel_unmap;
+    wl_signal_add(&toplevel->base->surface->events.unmap, &xv->base.unmap);
 
-  xv->base.commit.notify = xdg_toplevel_commit;
-  wl_signal_add(&toplevel->base->surface->events.commit, &xv->base.commit);
+    xv->base.commit.notify = xdg_toplevel_commit;
+    wl_signal_add(&toplevel->base->surface->events.commit, &xv->base.commit);
 
-  xv->base.destroy.notify = xdg_toplevel_destroy;
-  wl_signal_add(&toplevel->events.destroy, &xv->base.destroy);
+    xv->base.destroy.notify = xdg_toplevel_destroy;
+    wl_signal_add(&toplevel->events.destroy, &xv->base.destroy);
 
-  xv->base.request_move.notify = xdg_toplevel_request_move;
-  wl_signal_add(&toplevel->events.request_move, &xv->base.request_move);
+    xv->base.request_move.notify = xdg_toplevel_request_move;
+    wl_signal_add(&toplevel->events.request_move, &xv->base.request_move);
 
-  xv->base.request_resize.notify = xdg_toplevel_request_resize;
-  wl_signal_add(&toplevel->events.request_resize, &xv->base.request_resize);
+    xv->base.request_resize.notify = xdg_toplevel_request_resize;
+    wl_signal_add(&toplevel->events.request_resize, &xv->base.request_resize);
 
-  xv->base.request_maximize.notify = xdg_toplevel_request_maximize;
-  wl_signal_add(&toplevel->events.request_maximize, &xv->base.request_maximize);
+    xv->base.request_maximize.notify = xdg_toplevel_request_maximize;
+    wl_signal_add(&toplevel->events.request_maximize,
+                  &xv->base.request_maximize);
 
-  xv->base.request_fullscreen.notify = xdg_toplevel_request_fullscreen;
-  wl_signal_add(&toplevel->events.request_fullscreen,
-                &xv->base.request_fullscreen);
+    xv->base.request_fullscreen.notify = xdg_toplevel_request_fullscreen;
+    wl_signal_add(&toplevel->events.request_fullscreen,
+                  &xv->base.request_fullscreen);
 }

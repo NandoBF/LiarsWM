@@ -1,15 +1,15 @@
 #include "workspace.h"
-#include "server.h"
 #include "layout.h"
+#include "server.h"
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-util.h>
 
-
 static int is_column_name_valid(const char* name) {
     // only allow numbers and letters
     for (int i = 0; name[i]; i++) {
-        if (name[i] == ' ') return 0;
+        if (name[i] == ' ')
+            return 0;
     }
     return 1;
 }
@@ -24,14 +24,17 @@ struct workspace* workspace_create(struct column* col) {
     wl_list_insert(&col->levels, &ws->link);
     ws->layout = &tiling_layout;
     return ws;
-} 
+}
 
-struct column* column_get_or_create(struct liars_server* server, struct monitor* monitor, const char* name) {
-    if (!is_column_name_valid(name)) return NULL;
+struct column* column_get_or_create(struct liars_server* server,
+                                    struct monitor* monitor, const char* name) {
+    if (!is_column_name_valid(name))
+        return NULL;
 
     struct column* col;
     wl_list_for_each(col, &server->columns, link) {
-        if (strcmp(col->name, name) == 0) return col;
+        if (strcmp(col->name, name) == 0)
+            return col;
     }
 
     col = calloc(1, sizeof(*col));
@@ -45,12 +48,3 @@ struct column* column_get_or_create(struct liars_server* server, struct monitor*
     workspace_create(col);
     return col;
 }
-
-
-
-
-
-
-
-
-

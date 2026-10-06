@@ -1,8 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 int liarsctl_main(int argc, char* argv[]) {
@@ -18,7 +18,7 @@ int liarsctl_main(int argc, char* argv[]) {
     }
 
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    struct sockaddr_un addr = { .sun_family = AF_UNIX };
+    struct sockaddr_un addr = {.sun_family = AF_UNIX};
     strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
     if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
@@ -28,7 +28,8 @@ int liarsctl_main(int argc, char* argv[]) {
 
     char cmd[512] = {0};
     for (int i = 0; i < argc; i++) {
-        if (i > 1) strcat(cmd, " ");
+        if (i > 1)
+            strcat(cmd, " ");
         strcat(cmd, argv[i]);
     }
 
@@ -43,5 +44,4 @@ int liarsctl_main(int argc, char* argv[]) {
 
     close(fd);
     return 0;
-
 }

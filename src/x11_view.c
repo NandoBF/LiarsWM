@@ -1,11 +1,11 @@
 #include "x11_view.h"
+#include "config.h"
 #include "input.h"
 #include "layout.h"
-#include "view.h"
 #include "server.h"
+#include "view.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
-#include "config.h"
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -24,21 +24,25 @@ struct unmanaged_x11 {
 static void unmanaged_x11_map(struct wl_listener* listener, void* data) {
     struct unmanaged_x11* unmanaged = wl_container_of(listener, unmanaged, map);
 
-    unmanaged->scene_tree = wlr_scene_subsurface_tree_create(&unmanaged->server->scene->tree, unmanaged->xsurface->surface);
+    unmanaged->scene_tree = wlr_scene_subsurface_tree_create(
+        &unmanaged->server->scene->tree, unmanaged->xsurface->surface);
     unmanaged->scene_tree->node.data = data;
 
-    wlr_scene_node_set_position(&unmanaged->scene_tree->node, unmanaged->xsurface->x, unmanaged->xsurface->y);
+    wlr_scene_node_set_position(&unmanaged->scene_tree->node,
+                                unmanaged->xsurface->x, unmanaged->xsurface->y);
 }
 
 static void unmanaged_x11_unmap(struct wl_listener* listener, void* data) {
-    struct unmanaged_x11* unmanaged = wl_container_of(listener, unmanaged, unmap);
+    struct unmanaged_x11* unmanaged =
+        wl_container_of(listener, unmanaged, unmap);
 
     wlr_scene_node_destroy(&unmanaged->scene_tree->node);
     unmanaged->scene_tree = NULL;
 }
 
 static void unmanaged_x11_destroy(struct wl_listener* listener, void* data) {
-    struct unmanaged_x11* unmanaged = wl_container_of(listener, unmanaged, destroy);
+    struct unmanaged_x11* unmanaged =
+        wl_container_of(listener, unmanaged, destroy);
 
     wl_list_remove(&unmanaged->associate.link);
     wl_list_remove(&unmanaged->dissociate.link);
@@ -48,29 +52,37 @@ static void unmanaged_x11_destroy(struct wl_listener* listener, void* data) {
     free(unmanaged);
 }
 
-static void unmanaged_x11_request_configure(struct wl_listener* listener, void* data) {
-    struct unmanaged_x11* unmanaged = wl_container_of(listener, unmanaged, request_configure);
+static void unmanaged_x11_request_configure(struct wl_listener* listener,
+                                            void* data) {
+    struct unmanaged_x11* unmanaged =
+        wl_container_of(listener, unmanaged, request_configure);
     struct wlr_xwayland_surface_configure_event* event = data;
 
-    wlr_xwayland_surface_configure(unmanaged->xsurface, event->x, event->y, event->width, event->height);
+    wlr_xwayland_surface_configure(unmanaged->xsurface, event->x, event->y,
+                                   event->width, event->height);
     if (unmanaged->scene_tree) {
-        wlr_scene_node_set_position(&unmanaged->scene_tree->node, event->x, event->y);
+        wlr_scene_node_set_position(&unmanaged->scene_tree->node, event->x,
+                                    event->y);
     }
 }
 
 static void unmanaged_x11_associate(struct wl_listener* listener, void* data) {
-    struct unmanaged_x11* unmanaged = wl_container_of(listener, unmanaged, associate);
+    struct unmanaged_x11* unmanaged =
+        wl_container_of(listener, unmanaged, associate);
     wl_signal_add(&unmanaged->xsurface->surface->events.map, &unmanaged->map);
-    wl_signal_add(&unmanaged->xsurface->surface->events.unmap, &unmanaged->unmap);
+    wl_signal_add(&unmanaged->xsurface->surface->events.unmap,
+                  &unmanaged->unmap);
 }
 
 static void unmanaged_x11_dissociate(struct wl_listener* listener, void* data) {
-    struct unmanaged_x11* unmanaged = wl_container_of(listener, unmanaged, dissociate);
+    struct unmanaged_x11* unmanaged =
+        wl_container_of(listener, unmanaged, dissociate);
     wl_list_remove(&unmanaged->map.link);
     wl_list_remove(&unmanaged->unmap.link);
 }
 
-static void handle_unmanaged_x11(struct liars_server* server, struct wlr_xwayland_surface* xsurface) {
+static void handle_unmanaged_x11(struct liars_server* server,
+                                 struct wlr_xwayland_surface* xsurface) {
     struct unmanaged_x11* unmanaged = calloc(1, sizeof(*unmanaged));
     unmanaged->xsurface = xsurface;
     unmanaged->server = server;
@@ -88,33 +100,34 @@ static void handle_unmanaged_x11(struct liars_server* server, struct wlr_xwaylan
     wl_signal_add(&xsurface->events.destroy, &unmanaged->destroy);
 
     unmanaged->request_configure.notify = unmanaged_x11_request_configure;
-    wl_signal_add(&xsurface->events.request_configure, &unmanaged->request_configure);
+    wl_signal_add(&xsurface->events.request_configure,
+                  &unmanaged->request_configure);
 }
-
 
 static void x11_view_map(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, map);
-    struct x11_view* x11_v = (struct x11_view *)view; 
+    struct x11_view* x11_v = (struct x11_view*)view;
 
     view->surface = x11_v->xsurface->surface;
     view->scene_tree = wlr_scene_tree_create(&view->server->scene->tree);
     view->scene_tree->node.data = view;
 
-    x11_v->surface_tree = wlr_scene_subsurface_tree_create(view->scene_tree, view->surface);
+    x11_v->surface_tree =
+        wlr_scene_subsurface_tree_create(view->scene_tree, view->surface);
     wlr_scene_node_set_position(&x11_v->surface_tree->node, 5, 5);
 
     view_map(view);
 }
 
 static void x11_view_unmap(struct wl_listener* listener, void* data) {
-    struct view *view = wl_container_of(listener, view, unmap);
+    struct view* view = wl_container_of(listener, view, unmap);
 
     if (view == view->server->cursor->grabbed_view) {
-    reset_cursor_mode(view->server->cursor);
+        reset_cursor_mode(view->server->cursor);
     }
-    struct wlr_seat *seat = view->server->seat->seat;
+    struct wlr_seat* seat = view->server->seat->seat;
     if (seat->keyboard_state.focused_surface == view->impl->get_surface(view)) {
-    wlr_seat_keyboard_clear_focus(seat);
+        wlr_seat_keyboard_clear_focus(seat);
     }
 
     wl_list_remove(&view->link);
@@ -122,8 +135,8 @@ static void x11_view_unmap(struct wl_listener* listener, void* data) {
 }
 
 static void x11_view_destroy(struct wl_listener* listener, void* data) {
-    struct view *view = wl_container_of(listener, view, unmap);
-    struct x11_view* x11_v = (struct x11_view *)view; 
+    struct view* view = wl_container_of(listener, view, unmap);
+    struct x11_view* x11_v = (struct x11_view*)view;
 
     wl_list_remove(&x11_v->associate.link);
     wl_list_remove(&x11_v->dissociate.link);
@@ -140,67 +153,68 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
     free(view); // perhaps a destructor would be better
 }
 
-static void x11_view_request_configure(struct wl_listener* listener, void* data) {
-    //TODO:
-    struct x11_view* x11_v = wl_container_of(listener, x11_v, request_configure);
+static void x11_view_request_configure(struct wl_listener* listener,
+                                       void* data) {
+    // TODO:
+    struct x11_view* x11_v =
+        wl_container_of(listener, x11_v, request_configure);
     struct wlr_xwayland_surface_configure_event* event = data;
 }
 
-
-
 static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+    struct x11_view* x11_v = (struct x11_view*)v;
     box->x = x11_v->xsurface->x;
     box->y = x11_v->xsurface->y;
     box->width = x11_v->xsurface->width;
     box->height = x11_v->xsurface->height;
-
 }
 
-
 static void x11_view_set_activated(struct view* v, bool activated) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+    struct x11_view* x11_v = (struct x11_view*)v;
     wlr_xwayland_surface_activate(x11_v->xsurface, activated);
 }
 
 static void x11_view_close(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+    struct x11_view* x11_v = (struct x11_view*)v;
     wlr_xwayland_surface_close(x11_v->xsurface);
 }
 
 static const char* x11_view_get_title(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+    struct x11_view* x11_v = (struct x11_view*)v;
     return x11_v->xsurface->title;
 }
 
 static const char* x11_view_get_app_id(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+    struct x11_view* x11_v = (struct x11_view*)v;
     return x11_v->xsurface->class;
 }
 
 static struct wlr_surface* x11_view_get_surface(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+    struct x11_view* x11_v = (struct x11_view*)v;
     return x11_v->xsurface->surface;
 }
 
 static void x11_view_set_size(struct view* v, int w, int h) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
-    
+    struct x11_view* x11_v = (struct x11_view*)v;
+
     if (v->borders[0]) {
         view_set_borders(v, w, h);
     }
     int view_width = w - (2 * BORDER_WIDTH);
     int view_height = h - (2 * BORDER_WIDTH);
-    
-    if (view_width <= 0) view_width = 1;
-    if (view_height <= 0) view_height = 1;
 
-    wlr_xwayland_surface_configure(x11_v->xsurface, v->scene_tree->node.x + BORDER_WIDTH, v->scene_tree->node.y + BORDER_WIDTH, view_width, view_height);
+    if (view_width <= 0)
+        view_width = 1;
+    if (view_height <= 0)
+        view_height = 1;
+
+    wlr_xwayland_surface_configure(
+        x11_v->xsurface, v->scene_tree->node.x + BORDER_WIDTH,
+        v->scene_tree->node.y + BORDER_WIDTH, view_width, view_height);
 }
 
-
-static bool x11_view_want_fullscreen(struct view *v) {
-    struct x11_view* x11_v = (struct x11_view *)v; 
+static bool x11_view_want_fullscreen(struct view* v) {
+    struct x11_view* x11_v = (struct x11_view*)v;
     return x11_v->xsurface->fullscreen;
 }
 
@@ -214,7 +228,6 @@ static const struct view_impl x11_view_impl = {
     .want_fullscreen = x11_view_want_fullscreen,
     .get_surface = x11_view_get_surface,
 };
-
 
 static void x11_view_grab_focus(struct wl_listener* listener, void* data) {
     struct x11_view* xv = wl_container_of(listener, xv, grab_focus);
@@ -235,7 +248,7 @@ static void x11_view_dissociate(struct wl_listener* listener, void* data) {
 
 void server_new_xwayland_surface(struct wl_listener* listener, void* data) {
     struct wlr_xwayland_surface* xsurface = data;
-    struct liars_server* server = 
+    struct liars_server* server =
         wl_container_of(listener, server, new_xwayland_surface);
 
     if (xsurface->override_redirect) {
@@ -270,4 +283,3 @@ void server_new_xwayland_surface(struct wl_listener* listener, void* data) {
 
     wlr_log(WLR_DEBUG, "Started x11 surface");
 }
-

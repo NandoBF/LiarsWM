@@ -1,8 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 int main(int argc, char* argv[]) {
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    struct sockaddr_un addr = { .sun_family = AF_UNIX };
+    struct sockaddr_un addr = {.sun_family = AF_UNIX};
     strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
     if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
@@ -34,7 +34,8 @@ int main(int argc, char* argv[]) {
     // Join argv[1..] into a single command string
     char cmd[512] = {0};
     for (int i = 1; i < argc; i++) {
-        if (i > 1) strcat(cmd, " ");
+        if (i > 1)
+            strcat(cmd, " ");
         strcat(cmd, argv[i]);
     }
 
