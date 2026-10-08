@@ -1,6 +1,7 @@
 #include "pointer_contraint.h"
-#include "server.h"
 #include "view.h"
+#include "input.h"
+#include "server.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>

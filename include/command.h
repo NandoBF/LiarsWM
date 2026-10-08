@@ -1,5 +1,6 @@
 #pragma once
 struct liars_server;
+struct liars_keybind;
 
 #define CMD_BUFFER_MAX 128
 
@@ -26,5 +27,5 @@ struct alias {
     const char* command;
 };
 
-
 const char* handle_command_input(struct liars_server* server, const char* cmd);
+void execute_keybind(struct liars_server* server, const struct liars_keybind* bind);

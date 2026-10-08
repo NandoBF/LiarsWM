@@ -3,6 +3,10 @@ project('liarswm', 'c')
 wlroots = dependency('wlroots-0.20')
 wayland_server = dependency('wayland-server')
 xkbcommon = dependency('xkbcommon')
+
+cc = meson.get_compiler('c')
+toml = cc.find_library('tomlc17', dirs: meson.current_source_dir() / 'lib', required: true)
+
 add_project_arguments('-DWLR_USE_UNSTABLE', language: 'c')
 
 incdir = include_directories('include')
@@ -30,9 +34,11 @@ executable(
   'src/x11_view.c',
   'src/layer_view.c',
   'src/pointer_constraint.c',
+  'src/config.c',
+  'src/parser.c',
   layer_shell_header,
   include_directories : incdir,
-  dependencies: [wlroots, wayland_server, xkbcommon]
+  dependencies: [wlroots, wayland_server, xkbcommon, toml]
 )
 
 executable(

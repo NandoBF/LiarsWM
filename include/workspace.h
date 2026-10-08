@@ -5,7 +5,6 @@
 #include <wayland-util.h>
 #include <wlr/backend.h>
 
-
 struct column {
     struct wl_list link;
     struct liars_server* server;
@@ -21,7 +20,6 @@ struct workspace {
     struct column* col;
     int level;
 
-
     struct wlr_scene_tree* tree;
     struct wl_list tiles;
     struct wl_list floating;
@@ -29,4 +27,5 @@ struct workspace {
     void* layout_data;
 };
 
-struct column* column_get_or_create(struct liars_server* server, struct monitor* monitor, const char* name);
+struct column* column_get_or_create(struct liars_server* server,
+                                    struct monitor* monitor, const char* name);

@@ -1,0 +1,25 @@
+[general]
+
+
+[general.appearance]
+inner_gaps = 3
+outer_gaps = 5
+border_width = 5
+
+[[keybind]]
+keys = "Ctrl+Return"
+action = "spawn"
+args = "kitty"
+
+[[keybind]]
+keys = "Ctrl+Shift+C"
+action = "close"
+
+[[keybind]]
+keys = "Mod+Shit+C"
+action = "close"
+
+[[keybind]]
+keys = "Mod+%d"
+action = "workspace"
+args = "%d"

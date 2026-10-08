@@ -3,6 +3,7 @@
 #include "layout.h"
 #include "pointer_contraint.h"
 #include "server.h"
+#include "input.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
 #include <wayland-util.h>
@@ -84,17 +85,18 @@ static void map_borders(struct view* view) {
 }
 
 void view_set_borders(struct view* v, int w, int h) {
-    wlr_scene_rect_set_size(v->borders[0], w, BORDER_WIDTH);
+    struct config* config = v->server->config;
+    wlr_scene_rect_set_size(v->borders[0], w, config->border_width);
     wlr_scene_node_set_position(&v->borders[0]->node, 0, 0);
 
-    wlr_scene_rect_set_size(v->borders[1], w, BORDER_WIDTH);
-    wlr_scene_node_set_position(&v->borders[1]->node, 0, h - BORDER_WIDTH);
+    wlr_scene_rect_set_size(v->borders[1], w, config->border_width);
+    wlr_scene_node_set_position(&v->borders[1]->node, 0, h - config->border_width);
 
-    wlr_scene_rect_set_size(v->borders[2], BORDER_WIDTH, h);
+    wlr_scene_rect_set_size(v->borders[2], config->border_width, h);
     wlr_scene_node_set_position(&v->borders[2]->node, 0, 0);
 
-    wlr_scene_rect_set_size(v->borders[3], BORDER_WIDTH, h);
-    wlr_scene_node_set_position(&v->borders[3]->node, w - BORDER_WIDTH, 0);
+    wlr_scene_rect_set_size(v->borders[3], config->border_width, h);
+    wlr_scene_node_set_position(&v->borders[3]->node, w - config->border_width, 0);
 }
 
 void view_map(struct view* view) {

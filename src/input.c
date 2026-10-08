@@ -1,9 +1,11 @@
 #include "input.h"
-#include "config.h"
+#include "command.h"
 #include "pointer_contraint.h"
 #include "server.h"
 #include "view.h"
+#include "config.h"
 #include "wlr/util/log.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -132,6 +134,7 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
     struct liars_keyboard* keyboard = wl_container_of(listener, keyboard, key);
     struct liars_seat* seat = keyboard->seat;
     struct liars_server* server = seat->server;
+    struct config* config = server->config;
     struct wlr_keyboard_key_event* event = data;
 
     uint32_t keycode = event->keycode + 8;
@@ -141,14 +144,21 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
                                        keycode, &syms);
     bool handled = false;
     uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
+
+    // mask off CAPS and NUM_LOCK. They break the modifier if turned on
+    uint32_t masked_modifiers = modifiers & ~WLR_MODIFIER_MOD2 & ~WLR_MODIFIER_CAPS;
+
     for (int i = 0; i < nsyms; i++) {
-        for (size_t k = 0; k < sizeof(keybinds) / sizeof(keybinds[0]); k++) {
-            if (modifiers == keybinds[k].modifiers &&
-                syms[i] == keybinds[k].keysym &&
+        xkb_keysym_t sym = xkb_keysym_to_lower(syms[i]);
+        for (int j = 0; j < config->keybind_num; j++) {
+            xkb_keysym_t bind_sym = xkb_keysym_to_lower(config->keybinds[j]->keysym);
+            if (masked_modifiers == config->keybinds[j]->modifiers &&
+                sym == bind_sym &&
                 event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-                keybinds[k].action(server, &keybinds[k].arg);
+                
+                wlr_log(WLR_DEBUG, "Keybinding matched!");
+                execute_keybind(server, config->keybinds[j]);
                 handled = true;
-                wlr_log(WLR_DEBUG, "Keybinding pressed");
             }
         }
     }

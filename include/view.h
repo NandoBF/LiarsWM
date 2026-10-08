@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
-#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
 
 struct liars_server;
@@ -44,17 +44,15 @@ struct view_impl {
     void (*set_size)(struct view* v, int width, int height);
     void (*set_activated)(struct view* v, bool activated);
     void (*close)(struct view* v);
-    const char*(*get_title)(struct view* v);
-    const char*(*get_app_id)(struct view* v);
+    const char* (*get_title)(struct view* v);
+    const char* (*get_app_id)(struct view* v);
     bool (*want_fullscreen)(struct view* v);
     struct wlr_surface* (*get_surface)(struct view* v);
 };
 
-
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface);
 bool is_view_focused(struct view* view);
-void focus_view(struct view* view); 
-
+void focus_view(struct view* view);
 
 void view_set_borders(struct view* v, int w, int h);
 void view_map(struct view* view);

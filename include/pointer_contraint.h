@@ -16,7 +16,8 @@ struct pointer_constraints {
     struct wlr_relative_pointer_manager_v1* relative_pointer_manager;
 };
 
-
 void destroy_active_pointer_constraint(struct pointer_constraints* pc);
-void new_active_pointer_constraint(struct pointer_constraints* pc, struct wlr_pointer_constraint_v1* constraint);
+void new_active_pointer_constraint(
+    struct pointer_constraints* pc,
+    struct wlr_pointer_constraint_v1* constraint);
 struct pointer_constraints* create_pointer_constraints(struct liars_seat* seat);

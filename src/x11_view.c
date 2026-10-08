@@ -200,8 +200,10 @@ static void x11_view_set_size(struct view* v, int w, int h) {
     if (v->borders[0]) {
         view_set_borders(v, w, h);
     }
-    int view_width = w - (2 * BORDER_WIDTH);
-    int view_height = h - (2 * BORDER_WIDTH);
+
+    struct config* config = v->server->config;
+    int view_width = w - (2 * config->border_width);
+    int view_height = h - (2 * config->border_width);
 
     if (view_width <= 0)
         view_width = 1;
@@ -209,8 +211,8 @@ static void x11_view_set_size(struct view* v, int w, int h) {
         view_height = 1;
 
     wlr_xwayland_surface_configure(
-        x11_v->xsurface, v->scene_tree->node.x + BORDER_WIDTH,
-        v->scene_tree->node.y + BORDER_WIDTH, view_width, view_height);
+        x11_v->xsurface, v->scene_tree->node.x + config->border_width,
+        v->scene_tree->node.y + config->border_width, view_width, view_height);
 }
 
 static bool x11_view_want_fullscreen(struct view* v) {

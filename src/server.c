@@ -6,6 +6,7 @@
 #include "workspace.h"
 #include "x11_view.h"
 #include "xdg_view.h"
+#include "config.h"
 #include <bits/time.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -248,6 +249,10 @@ int init_liar_server(struct liars_server* server,
         return 1;
     }
     wlr_log(WLR_DEBUG, "YOOO");
+
+    struct config* config = load_config("./config/example.toml"); 
+    server->config = config;
+
     wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");
 
     setenv("WAYLAND_DISPLAY", socket, true);

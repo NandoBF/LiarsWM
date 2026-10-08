@@ -11,13 +11,14 @@ void workspace_arrange(struct workspace* ws) {
         return;
 
     struct monitor* monitor = ws->col->monitor;
+    struct config* config = ws->col->server->config;
     int width = monitor->output->width;
     int height = monitor->output->height;
 
-    int edge_offset = OUTER_GAP - (INNER_GAP / 2);
+    int edge_offset = config->outer_gap - (config->inner_gap / 2);
 
     ws->layout->arrange(ws, edge_offset, edge_offset, width - (2 * edge_offset),
-                        height - (2 * edge_offset), INNER_GAP);
+                        height - (2 * edge_offset), config->inner_gap);
 }
 
 static void layout_master_stack(struct workspace* ws, int x, int y, int width,

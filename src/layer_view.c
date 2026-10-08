@@ -1,5 +1,6 @@
 #include "layer_shell.h"
 #include "server.h"
+#include "input.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 #include "wlr/util/log.h"
 #include <stdlib.h>

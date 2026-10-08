@@ -1,9 +1,8 @@
 #pragma once
+#include "view.h"
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/xwayland/xwayland.h>
-#include "view.h"
-
 
 struct x11_view {
     struct view base;
@@ -16,5 +15,4 @@ struct x11_view {
     struct wl_listener grab_focus;
 };
 
-void server_new_xwayland_surface(struct wl_listener* listener, void* data); 
-
+void server_new_xwayland_surface(struct wl_listener* listener, void* data);

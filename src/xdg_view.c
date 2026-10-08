@@ -21,9 +21,10 @@ static void xdg_view_set_size(struct view* v, int w, int h) {
     struct xdg_view* xv = (struct xdg_view*)v;
 
     view_set_borders(v, w, h);
+    struct config* config = v->server->config;
 
-    int view_width = w - (2 * BORDER_WIDTH);
-    int view_height = h - (2 * BORDER_WIDTH);
+    int view_width = w - (2 * config->border_width);
+    int view_height = h - (2 * config->border_width);
 
     if (view_width <= 0)
         view_width = 1;
@@ -156,6 +157,7 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     struct wlr_xdg_toplevel* toplevel = data;
     struct liars_server* server =
         wl_container_of(listener, server, new_xdg_toplevel);
+    struct config* config = server->config;
 
     struct xdg_view* xv = calloc(1, sizeof(*xv));
     wl_list_init(&xv->base.link);
@@ -170,8 +172,8 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
 
     xv->surface_tree =
         wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
-    wlr_scene_node_set_position(&xv->surface_tree->node, BORDER_WIDTH,
-                                BORDER_WIDTH);
+    wlr_scene_node_set_position(&xv->surface_tree->node, config->border_width,
+                                config->border_width);
 
     xv->base.map.notify = xdg_toplevel_map;
     wl_signal_add(&toplevel->base->surface->events.map, &xv->base.map);
