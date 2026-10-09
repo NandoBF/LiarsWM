@@ -77,3 +77,7 @@ struct liars_cursor* create_cursor(struct liars_seat* seat,
                                    struct wlr_output_layout* output_layout);
 
 void reset_cursor_mode(struct liars_cursor* cursor);
+
+struct wlr_surface* seat_focused_surface(struct liars_seat* seat);
+
+struct wlr_surface* wlr_seat_focused_surface(struct wlr_seat* seat);

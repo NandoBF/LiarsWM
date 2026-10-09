@@ -14,6 +14,14 @@
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <xkbcommon/xkbcommon.h>
 
+struct wlr_surface* seat_focused_surface(struct liars_seat* seat) {
+    return seat->seat->keyboard_state.focused_surface;
+}
+
+struct wlr_surface* wlr_seat_focused_surface(struct wlr_seat* seat) {
+    return seat->keyboard_state.focused_surface;
+}
+
 void reset_cursor_mode(struct liars_cursor* cursor) {
     cursor->cursor_mode = LIARSWM_CURSOR_PASSTHROUGH;
     cursor->grabbed_view = NULL;
@@ -265,6 +273,7 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
         return;
     }
 
+    // FIX: I ALSO HATE THIS
     double sx, sy;
     struct wlr_seat* seat = cursor->seat->seat;
     struct wlr_surface* surface = NULL;
@@ -279,6 +288,9 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
     if (surface) {
         wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(seat, time, sx, sy);
+        if (is_surface_focused(cursor->seat, surface)) {
+            focus_view(view);
+        }
     } else {
         wlr_seat_pointer_clear_focus(seat);
     }

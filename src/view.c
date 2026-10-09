@@ -10,7 +10,7 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface) {
-    struct wlr_surface* focused = seat->seat->keyboard_state.focused_surface;
+    struct wlr_surface* focused = seat_focused_surface(seat);
     if (!focused || !surface)
         return false;
     return wlr_surface_get_root_surface(surface) ==
@@ -22,7 +22,7 @@ bool is_view_focused(struct view* view) {
         return false;
     }
     struct wlr_surface* focused_surface =
-        view->server->seat->seat->keyboard_state.focused_surface;
+        seat_focused_surface(view->server->seat);
     return focused_surface == view->surface;
 }
 

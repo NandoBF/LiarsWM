@@ -2,6 +2,7 @@
 #include "input.h"
 #include "keybind.h"
 #include "server.h"
+#include "view.h"
 #include "wlr/util/log.h"
 #include <fcntl.h>
 #include <signal.h>
@@ -41,8 +42,7 @@ void workspace_command(struct liars_server* server, const char* command) {
 }
 
 void close_focused(struct liars_server* server, const char* command) {
-    struct wlr_surface* focused =
-        server->seat->seat->keyboard_state.focused_surface;
+    struct wlr_surface* focused = seat_focused_surface(server->seat);
     if (!focused)
         return;
 

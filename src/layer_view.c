@@ -69,7 +69,7 @@ static void layer_surface_unmap(struct wl_listener* listener, void* data) {
 
     if (layer_has_exclusive_keyboard(ls->layer_surface)) {
         struct wlr_seat* seat = ls->server->seat->seat;
-        if (seat->keyboard_state.focused_surface == ls->layer_surface->surface)
+        if (wlr_seat_focused_surface(seat) == ls->layer_surface->surface)
             wlr_seat_keyboard_notify_clear_focus(seat);
     }
 }

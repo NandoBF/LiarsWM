@@ -48,7 +48,7 @@ static void xdg_toplevel_unmap(struct wl_listener* listener, void* data) {
         reset_cursor_mode(view->server->cursor);
     }
     struct wlr_seat* seat = view->server->seat->seat;
-    if (seat->keyboard_state.focused_surface == view->impl->get_surface(view)) {
+    if (wlr_seat_focused_surface(seat) == view->impl->get_surface(view)) {
         wlr_seat_keyboard_clear_focus(seat);
     }
 
@@ -78,6 +78,18 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&view->request_fullscreen.link);
 
     wlr_scene_node_destroy(&view->scene_tree->node);
+
+    // FIX: I HATE THIS
+    struct liars_server* server = view->server;
+    struct wlr_cursor* cursor = server->cursor->cursor;
+    struct wlr_surface* surface = NULL;
+    double sx, sy;
+    struct view* new_focus =
+        desktop_view_at(server, cursor->x, cursor->y, &surface, &sx, &sy);
+    if (new_focus) {
+        focus_view(new_focus);
+    }
+
     free(view); // perhaps a destructor would be better
 }
 

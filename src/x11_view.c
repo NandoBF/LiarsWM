@@ -126,7 +126,7 @@ static void x11_view_unmap(struct wl_listener* listener, void* data) {
         reset_cursor_mode(view->server->cursor);
     }
     struct wlr_seat* seat = view->server->seat->seat;
-    if (seat->keyboard_state.focused_surface == view->impl->get_surface(view)) {
+    if (wlr_seat_focused_surface(seat) == view->impl->get_surface(view)) {
         wlr_seat_keyboard_clear_focus(seat);
     }
 
