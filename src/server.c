@@ -20,6 +20,29 @@
 #include <wlr/xwayland.h>
 #include <xkbcommon/xkbcommon.h>
 
+struct view* get_focused_view(struct liars_server* server) {
+    struct wlr_surface* focused_surface = seat_focused_surface(server->seat);
+    if (!focused_surface)
+        return NULL;
+
+    struct column* col;
+    wl_list_for_each(col, &server->columns, link) {
+        struct workspace* ws;
+        wl_list_for_each(ws, &col->levels, link) {
+            struct view* v;
+            wl_list_for_each(v, &ws->tiles, link) {
+                if (v->surface == focused_surface)
+                    return v;
+            }
+            wl_list_for_each(v, &ws->floating, link) {
+                if (v->surface == focused_surface)
+                    return v;
+            }
+        }
+    }
+    return NULL;
+}
+
 void server_run(struct liars_server* server) {
     wl_display_run(server->wl_display);
 }
@@ -46,7 +69,7 @@ void switch_to_column(struct liars_server* server, const char* name) {
             wlr_scene_node_set_enabled(&new->tree->node, true);
 
             server->active_workspace = new;
-
+            focus_view_under_cursor(server);
             wlr_log(WLR_INFO, "Switched to workspace %s", name);
             return;
         }
@@ -139,8 +162,14 @@ struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
                              struct wlr_surface** surface, double* sx,
                              double* sy) {
 
+    double _sx, _sy;
     struct wlr_scene_node* node =
-        wlr_scene_node_at(&server->scene->tree.node, lx, ly, sx, sy);
+        wlr_scene_node_at(&server->scene->tree.node, lx, ly, &_sx, &_sy);
+
+    if (sx)
+        *sx = _sx;
+    if (sy)
+        *sy = _sy;
 
     if (node == NULL || node->type != WLR_SCENE_NODE_BUFFER) {
         return NULL;
@@ -152,7 +181,8 @@ struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
     if (!scene_surface)
         return NULL;
 
-    *surface = scene_surface->surface;
+    if (surface)
+        *surface = scene_surface->surface;
 
     struct wlr_scene_tree* tree = node->parent;
     while (tree != NULL && tree->node.data == NULL) {
@@ -163,6 +193,36 @@ struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
     }
 
     return tree->node.data;
+}
+
+struct view* get_view_under_cursor(struct liars_server* server) {
+    if (!server->cursor || !server->cursor->cursor)
+        return NULL;
+    return desktop_view_at(server, server->cursor->cursor->x,
+                           server->cursor->cursor->y, NULL, NULL, NULL);
+}
+
+void focus_view_under_cursor(struct liars_server* server) {
+    struct view* new_focus = get_view_under_cursor(server);
+    if (new_focus) {
+        focus_view(new_focus);
+    } else {
+        struct workspace* ws = server->active_workspace;
+        if (ws) {
+            struct view* fallback = NULL;
+            if (!wl_list_empty(&ws->floating)) {
+                fallback = wl_container_of(ws->floating.next, fallback, link);
+            } else if (!wl_list_empty(&ws->tiles)) {
+                fallback = wl_container_of(ws->tiles.next, fallback, link);
+            }
+
+            if (fallback) {
+                focus_view(fallback);
+            } else if (server->seat && server->seat->seat) {
+                wlr_seat_keyboard_clear_focus(server->seat->seat);
+            }
+        }
+    }
 }
 
 int init_liar_server(struct liars_server* server,

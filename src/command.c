@@ -4,13 +4,15 @@
 #include "server.h"
 #include "view.h"
 #include "wlr/util/log.h"
+#include "workspace.h"
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
+#include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
 
-void spawn(struct liars_server* server, const char* command) {
+void spawn_command(struct liars_server* server, const char* command) {
     wlr_log(WLR_INFO, "Spawning: %s", command);
     if (fork() == 0) {
         setsid();
@@ -41,6 +43,26 @@ void workspace_command(struct liars_server* server, const char* command) {
     switch_to_column(server, command);
 }
 
+void send_to_workspace_command(struct liars_server* server,
+                               const char* command) {
+    struct view* view = get_focused_view(server);
+    if (!view)
+        return;
+
+    struct monitor* monitor;
+    wl_list_for_each(monitor, &server->monitors, link) {
+        struct column* col = column_get_or_create(server, monitor, command);
+        if (col) {
+            wlr_log(WLR_INFO, "Sending to workspace: %s", command);
+            struct workspace* target_ws =
+                wl_container_of(col->levels.next, target_ws, link);
+            send_to_workspace(target_ws, view);
+            focus_view_under_cursor(server);
+            return;
+        }
+    }
+}
+
 void close_focused(struct liars_server* server, const char* command) {
     struct wlr_surface* focused = seat_focused_surface(server->seat);
     if (!focused)
@@ -54,9 +76,11 @@ void close_focused(struct liars_server* server, const char* command) {
     wlr_xdg_toplevel_send_close(toplevel);
 }
 
-static const struct command_def commands[] = {{"spawn", spawn},
-                                              {"workspace", workspace_command},
-                                              {"close", close_focused}};
+static const struct command_def commands[] = {
+    {"spawn", spawn_command},
+    {"workspace", workspace_command},
+    {"close", close_focused},
+    {"workspacesend", send_to_workspace_command}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd) {
 

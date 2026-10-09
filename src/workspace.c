@@ -1,6 +1,7 @@
 #include "workspace.h"
 #include "layout.h"
 #include "server.h"
+#include "view.h"
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-util.h>
@@ -24,6 +25,29 @@ struct workspace* workspace_create(struct column* col) {
     wl_list_insert(&col->levels, &ws->link);
     ws->layout = &tiling_layout;
     return ws;
+}
+
+int send_to_workspace(struct workspace* new, struct view* view) {
+    if (view->workspace == new)
+        return 0;
+
+    struct workspace* old = view->workspace;
+
+    wl_list_remove(&view->link);
+    wl_list_insert(&new->tiles, &view->link);
+
+    view->workspace = new;
+    wlr_scene_node_reparent(&view->scene_tree->node, new->tree);
+
+    if (old && old->layout) {
+        workspace_arrange(old);
+    }
+    if (new->layout) {
+        workspace_arrange(new);
+    }
+    focus_view_under_cursor(view->server);
+
+    return 1;
 }
 
 struct column* column_get_or_create(struct liars_server* server,

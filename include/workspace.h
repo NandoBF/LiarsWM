@@ -29,3 +29,5 @@ struct workspace {
 
 struct column* column_get_or_create(struct liars_server* server,
                                     struct monitor* monitor, const char* name);
+
+int send_to_workspace(struct workspace* new, struct view* view);

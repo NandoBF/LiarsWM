@@ -273,13 +273,11 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
         return;
     }
 
-    // FIX: I ALSO HATE THIS
     double sx, sy;
     struct wlr_seat* seat = cursor->seat->seat;
     struct wlr_surface* surface = NULL;
     struct view* view = desktop_view_at(cursor->seat->server, cursor->cursor->x,
                                         cursor->cursor->y, &surface, &sx, &sy);
-
     if (!view) {
         wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager,
                                "default");
@@ -339,11 +337,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
     if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
         reset_cursor_mode(cursor);
     } else {
-        double sx, sy;
-        struct wlr_surface* surface = NULL;
-        struct view* view = desktop_view_at(
-            server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
-        focus_view(view);
+        focus_view_under_cursor(server);
     }
 }
 
