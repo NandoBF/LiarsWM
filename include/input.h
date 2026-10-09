@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wlr/util/box.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -17,6 +16,7 @@
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/util/box.h>
 #include <wlr/util/log.h>
 
 enum liars_cursor_mode {

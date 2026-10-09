@@ -1,9 +1,9 @@
 #include "input.h"
 #include "command.h"
+#include "config.h"
 #include "pointer_contraint.h"
 #include "server.h"
 #include "view.h"
-#include "config.h"
 #include "wlr/util/log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,16 +146,18 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
     uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
 
     // mask off CAPS and NUM_LOCK. They break the modifier if turned on
-    uint32_t masked_modifiers = modifiers & ~WLR_MODIFIER_MOD2 & ~WLR_MODIFIER_CAPS;
+    uint32_t masked_modifiers =
+        modifiers & ~WLR_MODIFIER_MOD2 & ~WLR_MODIFIER_CAPS;
 
     for (int i = 0; i < nsyms; i++) {
         xkb_keysym_t sym = xkb_keysym_to_lower(syms[i]);
         for (int j = 0; j < config->keybind_num; j++) {
-            xkb_keysym_t bind_sym = xkb_keysym_to_lower(config->keybinds[j]->keysym);
+            xkb_keysym_t bind_sym =
+                xkb_keysym_to_lower(config->keybinds[j]->keysym);
             if (masked_modifiers == config->keybinds[j]->modifiers &&
                 sym == bind_sym &&
                 event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-                
+
                 wlr_log(WLR_DEBUG, "Keybinding matched!");
                 execute_keybind(server, config->keybinds[j]);
                 handled = true;

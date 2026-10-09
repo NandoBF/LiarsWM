@@ -1,9 +1,9 @@
 #include "view.h"
 #include "config.h"
+#include "input.h"
 #include "layout.h"
 #include "pointer_contraint.h"
 #include "server.h"
-#include "input.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
 #include <wayland-util.h>
@@ -90,13 +90,15 @@ void view_set_borders(struct view* v, int w, int h) {
     wlr_scene_node_set_position(&v->borders[0]->node, 0, 0);
 
     wlr_scene_rect_set_size(v->borders[1], w, config->border_width);
-    wlr_scene_node_set_position(&v->borders[1]->node, 0, h - config->border_width);
+    wlr_scene_node_set_position(&v->borders[1]->node, 0,
+                                h - config->border_width);
 
     wlr_scene_rect_set_size(v->borders[2], config->border_width, h);
     wlr_scene_node_set_position(&v->borders[2]->node, 0, 0);
 
     wlr_scene_rect_set_size(v->borders[3], config->border_width, h);
-    wlr_scene_node_set_position(&v->borders[3]->node, w - config->border_width, 0);
+    wlr_scene_node_set_position(&v->borders[3]->node, w - config->border_width,
+                                0);
 }
 
 void view_map(struct view* view) {
