@@ -70,18 +70,10 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
 
     wl_list_remove(&view->map.link);
     wl_list_remove(&view->unmap.link);
-    wl_list_remove(&view->commit.link);
-    wl_list_remove(&view->destroy.link);
-    wl_list_remove(&view->request_move.link);
-    wl_list_remove(&view->request_resize.link);
-    wl_list_remove(&view->request_maximize.link);
-    wl_list_remove(&view->request_fullscreen.link);
-
-    wlr_scene_node_destroy(&view->scene_tree->node);
+    view_destroy(view);
 
     focus_view_under_cursor(view->server);
-
-    free(view); // perhaps a destructor would be better
+    free(view);
 }
 
 static void xdg_toplevel_request_move(struct wl_listener* listener,

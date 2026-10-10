@@ -56,3 +56,4 @@ void focus_view(struct view* view);
 
 void view_set_borders(struct view* v, int w, int h);
 void view_map(struct view* view);
+void view_destroy(struct view* view);

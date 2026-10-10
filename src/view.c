@@ -112,3 +112,15 @@ void view_map(struct view* view) {
     workspace_arrange(view->workspace);
     focus_view(view);
 }
+
+// This does not free the view. It must be freed after
+void view_destroy(struct view* view) {
+    wl_list_remove(&view->commit.link);
+    wl_list_remove(&view->destroy.link);
+    wl_list_remove(&view->request_move.link);
+    wl_list_remove(&view->request_resize.link);
+    wl_list_remove(&view->request_maximize.link);
+    wl_list_remove(&view->request_fullscreen.link);
+
+    wlr_scene_node_destroy(&view->scene_tree->node);
+}

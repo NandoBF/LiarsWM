@@ -16,9 +16,9 @@ keys = "Ctrl+Shift+C"
 action = "close"
 
 [[keybind]]
-keys = "Ctrl+Shift+F"
+keys = "Ctrl+Shift+Space"
 action = "spawn"
-args = "firefox"
+args = "rofi -show drun"
 
 [[keybind]]
 keys = "Mod+Shit+C"
@@ -29,19 +29,17 @@ keys = "Mod+%d"
 action = "workspace"
 args = "%d"
 
-
-[[keybind]]
-keys = "Ctrl+1"
-action = "workspace"
-args = "1"
-
-[[keybind]]
-keys = "Ctrl+2"
-action = "workspace"
-args = "2"
-
 [[keybind]]
 keys = "Ctrl+Alt+2"
 action = "workspacesend"
 args = "2"
 
+[[keybind]]
+keys = "Ctrl+Space"
+action = "spawn"
+args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspace {}"
+
+[[keybind]]
+keys = "Ctrl+Alt+Space"
+action = "spawn"
+args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspacesend {}"

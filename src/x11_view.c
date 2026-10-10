@@ -140,17 +140,11 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
 
     wl_list_remove(&x11_v->associate.link);
     wl_list_remove(&x11_v->dissociate.link);
-    wl_list_remove(&view->commit.link);
-    wl_list_remove(&view->destroy.link);
-    wl_list_remove(&view->request_move.link);
-    wl_list_remove(&view->request_resize.link);
-    wl_list_remove(&view->request_maximize.link);
-    wl_list_remove(&view->request_fullscreen.link);
     wl_list_remove(&x11_v->request_configure.link);
     wl_list_remove(&x11_v->grab_focus.link);
+    view_destroy(view);
 
-    wlr_scene_node_destroy(&view->scene_tree->node);
-    free(view); // perhaps a destructor would be better
+    free(view);
 }
 
 static void x11_view_request_configure(struct wl_listener* listener,
