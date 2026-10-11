@@ -25,6 +25,8 @@ struct workspace {
     struct wl_list floating;
     const struct layout* layout;
     void* layout_data;
+
+    bool needs_arrange; // FIX: I dont like this much
 };
 
 struct column* column_get_or_create(struct liars_server* server,

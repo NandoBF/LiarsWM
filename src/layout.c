@@ -19,6 +19,7 @@ void workspace_arrange(struct workspace* ws) {
 
     ws->layout->arrange(ws, edge_offset, edge_offset, width - (2 * edge_offset),
                         height - (2 * edge_offset), config->inner_gap);
+    ws->needs_arrange = false;
 }
 
 static void layout_master_stack(struct workspace* ws, int x, int y, int width,

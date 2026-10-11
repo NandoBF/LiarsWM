@@ -7,6 +7,7 @@
 #include "wlr/util/edges.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
+#include <stddef.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -17,6 +18,12 @@ struct xdg_view {
     struct wlr_xdg_toplevel* toplevel;
     struct wlr_scene_tree* surface_tree;
     uint32_t pending_configure_serial;
+};
+
+struct xdg_popup {
+    struct wlr_xdg_popup* xdg_popup;
+    struct wl_listener commit;
+    struct wl_listener destroy;
 };
 
 static void xdg_view_set_size(struct view* v, int w, int h) {
@@ -168,13 +175,13 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     xv->base.impl = &xdg_view_impl;
     xv->base.surface = toplevel->base->surface;
     xv->base.server = server;
-    toplevel->base->data = xv;
 
     xv->base.scene_tree = wlr_scene_tree_create(&server->scene->tree);
     xv->base.scene_tree->node.data = &xv->base;
 
     xv->surface_tree =
         wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
+    toplevel->base->data = xv->surface_tree;
     wlr_scene_node_set_position(&xv->surface_tree->node, config->border_width,
                                 config->border_width);
 
@@ -203,4 +210,54 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     xv->base.request_fullscreen.notify = xdg_toplevel_request_fullscreen;
     wl_signal_add(&toplevel->events.request_fullscreen,
                   &xv->base.request_fullscreen);
+}
+
+static void xdg_popup_commit(struct wl_listener* listener, void* data) {
+    struct xdg_popup* popup = wl_container_of(listener, popup, commit);
+
+    if (popup->xdg_popup->base->initial_commit) {
+        // TODO: Might need to change the popups geometry
+        wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    }
+}
+
+static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
+    struct xdg_popup* popup = wl_container_of(listener, popup, destroy);
+
+    wl_list_remove(&popup->commit.link);
+    wl_list_remove(&popup->destroy.link);
+
+    free(popup);
+}
+
+void server_new_xdg_popup(struct wl_listener* listener, void* data) {
+    struct wlr_xdg_popup* wlr_xdg_popup = data;
+
+    struct xdg_popup* popup = calloc(1, sizeof(*popup));
+    popup->xdg_popup = wlr_xdg_popup;
+
+    struct wlr_xdg_surface* parent =
+        wlr_xdg_surface_try_from_wlr_surface(wlr_xdg_popup->parent);
+
+    if (!parent) {
+        wlr_log(WLR_ERROR, "Xdg popup has no parent!");
+        free(popup);
+        return;
+    }
+
+    struct wlr_scene_tree* parent_tree = parent->data;
+    if (!parent_tree) {
+        wlr_log(WLR_ERROR, "Xdg popup parent has no scene tree!");
+        free(popup);
+        return;
+    }
+
+    wlr_xdg_popup->base->data =
+        wlr_scene_xdg_surface_create(parent_tree, wlr_xdg_popup->base);
+
+    popup->commit.notify = xdg_popup_commit;
+    wl_signal_add(&wlr_xdg_popup->base->surface->events.commit, &popup->commit);
+
+    popup->destroy.notify = xdg_popup_destroy;
+    wl_signal_add(&wlr_xdg_popup->events.destroy, &popup->destroy);
 }

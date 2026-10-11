@@ -1,12 +1,13 @@
 #include "input.h"
 #include "command.h"
 #include "config.h"
+#include "layout.h"
 #include "pointer_contraint.h"
 #include "server.h"
 #include "view.h"
 #include "wlr/util/log.h"
+#include "workspace.h"
 #include <linux/input-event-codes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -339,6 +340,7 @@ void begin_interactive(struct view* view, enum liars_cursor_mode mode,
     if (mode == LIARSWM_CURSOR_MOVE) {
         cursor->grab_x = cursor->cursor->x - view->scene_tree->node.x;
         cursor->grab_y = cursor->cursor->y - view->scene_tree->node.y;
+        view->workspace->needs_arrange = true;
     } else {
         struct wlr_box geo_box;
         view->impl->get_geometry(view, &geo_box);
@@ -355,6 +357,7 @@ void begin_interactive(struct view* view, enum liars_cursor_mode mode,
         cursor->grab_geobox.y += view->scene_tree->node.y;
 
         cursor->resize_edges = edges;
+        view->workspace->needs_arrange = true;
     }
 }
 
@@ -371,7 +374,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
         is_interactive_modifier) {
         struct view* view = get_view_under_cursor(server);
         if (view) {
-            focus_view(view);
+            focus_view(view); // FIX: Unecessary focus?
             if (event->button == BTN_LEFT) {
                 begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
                 return;
@@ -400,6 +403,9 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
                                    event->button, event->state);
     if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
         reset_cursor_mode(cursor);
+        if (server->active_workspace->needs_arrange) {
+            workspace_arrange(server->active_workspace);
+        }
     } else {
         focus_view_under_cursor(server);
     }

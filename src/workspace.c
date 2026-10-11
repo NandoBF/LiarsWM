@@ -24,6 +24,7 @@ struct workspace* workspace_create(struct column* col) {
     wl_list_init(&ws->floating);
     wl_list_insert(&col->levels, &ws->link);
     ws->layout = &tiling_layout;
+    ws->needs_arrange = true;
     return ws;
 }
 

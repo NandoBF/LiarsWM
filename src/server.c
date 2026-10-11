@@ -273,6 +273,9 @@ int init_liar_server(struct liars_server* server,
     wl_signal_add(&server->xdg_shell->events.new_toplevel,
                   &server->new_xdg_toplevel);
 
+    server->new_xdg_popup.notify = server_new_xdg_popup;
+    wl_signal_add(&server->xdg_shell->events.new_popup, &server->new_xdg_popup);
+
     server->layer_shell = wlr_layer_shell_v1_create(server->wl_display, 4);
     server->new_layer_shell_surface.notify = server_new_layer_shell_surface;
     wl_signal_add(&server->layer_shell->events.new_surface,
