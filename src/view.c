@@ -67,7 +67,7 @@ void focus_view(struct view* view) {
     }
 
     view->impl->set_activated(view, true);
-    wlr_log(WLR_INFO, "Focused: %s", view->impl->get_title(view));
+    wlr_log(WLR_DEBUG, "Focused: %s", view->impl->get_title(view));
 
     if (keyboard != NULL) {
         wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes,

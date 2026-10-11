@@ -4,6 +4,8 @@
 #include "layout.h"
 #include "server.h"
 #include "view.h"
+#include "wlr/util/edges.h"
+#include "wlr/util/log.h"
 #include "workspace.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
@@ -79,18 +81,24 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
 static void xdg_toplevel_request_move(struct wl_listener* listener,
                                       void* data) {
     struct view* view = wl_container_of(listener, view, request_move);
-    // begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
-    //  TODO:
+    begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
 }
 
 static void xdg_toplevel_request_resize(struct wl_listener* listener,
                                         void* data) {
-    // TODO:
+
+    struct view* view = wl_container_of(listener, view, request_resize);
+    struct wlr_xdg_toplevel_resize_event* event = data;
+    begin_interactive(view, LIARSWM_CURSOR_RESIZE, event->edges);
 }
 
 static void xdg_toplevel_request_maximize(struct wl_listener* listener,
                                           void* data) {
-    // TODO:
+    struct view* view = wl_container_of(listener, view, request_maximize);
+    struct xdg_view* xdg_view = (struct xdg_view*)view;
+    if (xdg_view->toplevel->base->initialized) {
+        wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
+    }
 }
 
 static void xdg_toplevel_request_fullscreen(struct wl_listener* listener,

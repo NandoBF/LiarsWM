@@ -5,6 +5,7 @@
 #include "server.h"
 #include "view.h"
 #include "wlr/util/log.h"
+#include <linux/input-event-codes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
@@ -286,7 +287,7 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
     if (surface) {
         wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(seat, time, sx, sy);
-        if (is_surface_focused(cursor->seat, surface)) {
+        if (!is_surface_focused(cursor->seat, surface)) {
             focus_view(view);
         }
     } else {
@@ -327,10 +328,73 @@ static void server_cursor_motion_absolute(struct wl_listener* listener,
     process_cursor_motion(cursor, event->time_msec);
 }
 
+void begin_interactive(struct view* view, enum liars_cursor_mode mode,
+                       uint32_t edges) {
+    struct liars_server* server = view->server;
+    struct liars_cursor* cursor = server->cursor;
+
+    cursor->grabbed_view = view;
+    cursor->cursor_mode = mode;
+
+    if (mode == LIARSWM_CURSOR_MOVE) {
+        cursor->grab_x = cursor->cursor->x - view->scene_tree->node.x;
+        cursor->grab_y = cursor->cursor->y - view->scene_tree->node.y;
+    } else {
+        struct wlr_box geo_box;
+        view->impl->get_geometry(view, &geo_box);
+
+        double border_x = (view->scene_tree->node.x + geo_box.x) +
+                          ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
+        double border_y = (view->scene_tree->node.y + geo_box.y) +
+                          ((edges & WLR_EDGE_BOTTOM) ? geo_box.height : 0);
+        cursor->grab_x = cursor->cursor->x - border_x;
+        cursor->grab_y = cursor->cursor->y - border_y;
+
+        cursor->grab_geobox = geo_box;
+        cursor->grab_geobox.x += view->scene_tree->node.x;
+        cursor->grab_geobox.y += view->scene_tree->node.y;
+
+        cursor->resize_edges = edges;
+    }
+}
+
 static void server_cursor_button(struct wl_listener* listener, void* data) {
     struct liars_cursor* cursor = wl_container_of(listener, cursor, button);
     struct liars_server* server = cursor->seat->server;
     struct wlr_pointer_button_event* event = data;
+
+    struct wlr_keyboard* kb = wlr_seat_get_keyboard(cursor->seat->seat);
+    uint32_t modifiers = kb ? wlr_keyboard_get_modifiers(kb) : 0;
+    bool is_interactive_modifier = (modifiers & WLR_MODIFIER_CTRL);
+
+    if (event->state == WL_POINTER_BUTTON_STATE_PRESSED &&
+        is_interactive_modifier) {
+        struct view* view = get_view_under_cursor(server);
+        if (view) {
+            focus_view(view);
+            if (event->button == BTN_LEFT) {
+                begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
+                return;
+            } else if (event->button == BTN_RIGHT) {
+                struct wlr_box geo_box;
+                view->impl->get_geometry(view, &geo_box);
+
+                double center_x = view->scene_tree->node.x + geo_box.x +
+                                  (geo_box.width / 2.0);
+                double center_y = view->scene_tree->node.y + geo_box.y +
+                                  (geo_box.height / 2.0);
+
+                uint32_t edges = 0;
+                edges |= (cursor->cursor->x < center_x) ? WLR_EDGE_LEFT
+                                                        : WLR_EDGE_RIGHT;
+                edges |= (cursor->cursor->y < center_y) ? WLR_EDGE_TOP
+                                                        : WLR_EDGE_BOTTOM;
+
+                begin_interactive(view, LIARSWM_CURSOR_RESIZE, edges);
+                return;
+            }
+        }
+    }
 
     wlr_seat_pointer_notify_button(cursor->seat->seat, event->time_msec,
                                    event->button, event->state);
