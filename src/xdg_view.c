@@ -88,7 +88,7 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
 static void xdg_toplevel_request_move(struct wl_listener* listener,
                                       void* data) {
     struct view* view = wl_container_of(listener, view, request_move);
-    begin_interactive(view, LIARSWM_CURSOR_MOVE, 0);
+    // TODO: Empty? Perhaps ignoring is the correct thing
 }
 
 static void xdg_toplevel_request_resize(struct wl_listener* listener,
@@ -96,7 +96,6 @@ static void xdg_toplevel_request_resize(struct wl_listener* listener,
 
     struct view* view = wl_container_of(listener, view, request_resize);
     struct wlr_xdg_toplevel_resize_event* event = data;
-    begin_interactive(view, LIARSWM_CURSOR_RESIZE, event->edges);
 }
 
 static void xdg_toplevel_request_maximize(struct wl_listener* listener,
@@ -216,7 +215,8 @@ static void xdg_popup_commit(struct wl_listener* listener, void* data) {
     struct xdg_popup* popup = wl_container_of(listener, popup, commit);
 
     if (popup->xdg_popup->base->initial_commit) {
-        // TODO: Might need to change the popups geometry
+        // TODO: NEEDS to change the popups geometry. Sometimes renders
+        // offscreen
         wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
     }
 }

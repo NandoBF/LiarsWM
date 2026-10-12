@@ -17,6 +17,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
@@ -63,6 +64,9 @@ struct liars_server {
 
     struct wlr_layer_shell_v1* layer_shell;
     struct wl_listener new_layer_shell_surface;
+
+    struct wlr_xdg_decoration_manager_v1* decoration_manager;
+    struct wl_listener new_view_decoration;
 };
 
 struct view* desktop_view_at(struct liars_server* server, double lx, double ly,

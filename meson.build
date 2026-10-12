@@ -36,6 +36,7 @@ executable(
   'src/pointer_constraint.c',
   'src/config.c',
   'src/parser.c',
+  'src/decoration.c',
   layer_shell_header,
   include_directories : incdir,
   dependencies: [wlroots, wayland_server, xkbcommon, toml]

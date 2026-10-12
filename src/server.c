@@ -1,9 +1,11 @@
 #include "server.h"
 #include "config.h"
+#include "decoration.h"
 #include "input.h"
 #include "ipc.h"
 #include "layer_shell.h"
 #include "view.h"
+#include "wlr/types/wlr_xdg_decoration_v1.h"
 #include "workspace.h"
 #include "x11_view.h"
 #include "xdg_view.h"
@@ -291,6 +293,12 @@ int init_liar_server(struct liars_server* server,
 
         setenv("DISPLAY", server->xwayland->display_name, true);
     }
+
+    server->decoration_manager =
+        wlr_xdg_decoration_manager_v1_create(server->wl_display);
+    server->new_view_decoration.notify = new_view_decoration;
+    wl_signal_add(&server->decoration_manager->events.new_toplevel_decoration,
+                  &server->new_view_decoration);
 
     // Seat
     struct liars_seat* seat = create_seat(server);

@@ -16,6 +16,8 @@
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <xkbcommon/xkbcommon.h>
 
+// TODO: Trackpad clicks
+
 struct wlr_surface* seat_focused_surface(struct liars_seat* seat) {
     return seat->seat->keyboard_state.focused_surface;
 }
@@ -370,6 +372,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
     uint32_t modifiers = kb ? wlr_keyboard_get_modifiers(kb) : 0;
     bool is_interactive_modifier = (modifiers & WLR_MODIFIER_CTRL);
 
+    // FIX: Dont like this. Also it seems to have a massive delay on release
     if (event->state == WL_POINTER_BUTTON_STATE_PRESSED &&
         is_interactive_modifier) {
         struct view* view = get_view_under_cursor(server);
