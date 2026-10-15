@@ -3,6 +3,7 @@ project('liarswm', 'c')
 wlroots = dependency('wlroots-0.20')
 wayland_server = dependency('wayland-server')
 xkbcommon = dependency('xkbcommon')
+libinput = dependency('libinput')
 
 cc = meson.get_compiler('c')
 toml = cc.find_library('tomlc17', dirs: meson.current_source_dir() / 'lib', required: true)
@@ -39,7 +40,7 @@ executable(
   'src/decoration.c',
   layer_shell_header,
   include_directories : incdir,
-  dependencies: [wlroots, wayland_server, xkbcommon, toml]
+  dependencies: [wlroots, wayland_server, xkbcommon, libinput, toml]
 )
 
 executable(
