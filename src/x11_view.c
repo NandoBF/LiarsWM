@@ -9,6 +9,8 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#define X11_VIEW(ptr) ((struct x11_view*)(ptr))
+
 struct unmanaged_x11 {
     struct wlr_xwayland_surface* xsurface;
     struct wlr_scene_tree* scene_tree;
@@ -106,7 +108,7 @@ static void handle_unmanaged_x11(struct liars_server* server,
 
 static void x11_view_map(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, map);
-    struct x11_view* x11_v = (struct x11_view*)view;
+    struct x11_view* x11_v = X11_VIEW(view);
 
     view->surface = x11_v->xsurface->surface;
     view->scene_tree = wlr_scene_tree_create(&view->server->scene->tree);
@@ -136,7 +138,7 @@ static void x11_view_unmap(struct wl_listener* listener, void* data) {
 
 static void x11_view_destroy(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, unmap);
-    struct x11_view* x11_v = (struct x11_view*)view;
+    struct x11_view* x11_v = X11_VIEW(view);
 
     wl_list_remove(&x11_v->associate.link);
     wl_list_remove(&x11_v->dissociate.link);
@@ -156,7 +158,7 @@ static void x11_view_request_configure(struct wl_listener* listener,
 }
 
 static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     box->x = x11_v->xsurface->x;
     box->y = x11_v->xsurface->y;
     box->width = x11_v->xsurface->width;
@@ -164,32 +166,32 @@ static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
 }
 
 static void x11_view_set_activated(struct view* v, bool activated) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     wlr_xwayland_surface_activate(x11_v->xsurface, activated);
 }
 
 static void x11_view_close(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     wlr_xwayland_surface_close(x11_v->xsurface);
 }
 
 static const char* x11_view_get_title(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     return x11_v->xsurface->title;
 }
 
 static const char* x11_view_get_app_id(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     return x11_v->xsurface->class;
 }
 
 static struct wlr_surface* x11_view_get_surface(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     return x11_v->xsurface->surface;
 }
 
 static void x11_view_set_size(struct view* v, int w, int h) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
 
     if (v->borders[0]) {
         view_set_borders(v, w, h);
@@ -210,8 +212,25 @@ static void x11_view_set_size(struct view* v, int w, int h) {
 }
 
 static bool x11_view_want_fullscreen(struct view* v) {
-    struct x11_view* x11_v = (struct x11_view*)v;
+    struct x11_view* x11_v = X11_VIEW(v);
     return x11_v->xsurface->fullscreen;
+}
+
+static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
+    struct x11_view* x11_view = X11_VIEW(v);
+    v->is_fullscreen = fullscreen;
+    wlr_xwayland_surface_set_fullscreen(x11_view->xsurface, fullscreen);
+    if (fullscreen) {
+        wlr_scene_node_raise_to_top(&v->scene_tree->node);
+        struct monitor* monitor = v->workspace->col->monitor;
+        x11_view->base.impl->set_size(v, monitor->output->width,
+                                      monitor->output->height);
+        wlr_scene_node_set_position(&v->scene_tree->node, 0, 0);
+    } else {
+        workspace_arrange(v->workspace);
+    }
+    view_borders_set_enabled(v, !fullscreen);
+    wlr_scene_node_reparent(&v->scene_tree->node, v->workspace->tree);
 }
 
 static const struct view_impl x11_view_impl = {
@@ -223,6 +242,7 @@ static const struct view_impl x11_view_impl = {
     .get_app_id = x11_view_get_app_id,
     .want_fullscreen = x11_view_want_fullscreen,
     .get_surface = x11_view_get_surface,
+    .set_fullscreen = x11_view_set_fullscreen,
 };
 
 static void x11_view_grab_focus(struct wl_listener* listener, void* data) {

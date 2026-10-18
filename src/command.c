@@ -76,11 +76,17 @@ void close_focused(struct liars_server* server, const char* command) {
     wlr_xdg_toplevel_send_close(toplevel);
 }
 
+void fullscreen(struct liars_server* server, const char* command) {
+    struct view* view = get_focused_view(server);
+    view->impl->set_fullscreen(view, !view->is_fullscreen);
+}
+
 static const struct command_def commands[] = {
     {"spawn", spawn_command},
     {"workspace", workspace_command},
     {"close", close_focused},
-    {"workspacesend", send_to_workspace_command}};
+    {"workspacesend", send_to_workspace_command},
+    {"fullscreen", fullscreen}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd) {
 

@@ -13,6 +13,8 @@
 #include <wayland-util.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+#define XDG_VIEW(ptr) ((struct xdg_view*)(ptr))
+
 struct xdg_view {
     struct view base;
     struct wlr_xdg_toplevel* toplevel;
@@ -27,9 +29,11 @@ struct xdg_popup {
 };
 
 static void xdg_view_set_size(struct view* v, int w, int h) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
 
-    view_set_borders(v, w, h);
+    if (v->borders[0]) {
+        view_set_borders(v, w, h);
+    }
     struct config* config = v->server->config;
 
     int view_width = w - (2 * config->border_width);
@@ -67,7 +71,7 @@ static void xdg_toplevel_unmap(struct wl_listener* listener, void* data) {
 
 static void xdg_toplevel_commit(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, commit);
-    struct xdg_view* xv = (struct xdg_view*)view;
+    struct xdg_view* xv = XDG_VIEW(view);
 
     if (xv->toplevel->base->initial_commit) {
         wlr_xdg_toplevel_set_size(xv->toplevel, 0, 0);
@@ -101,7 +105,7 @@ static void xdg_toplevel_request_resize(struct wl_listener* listener,
 static void xdg_toplevel_request_maximize(struct wl_listener* listener,
                                           void* data) {
     struct view* view = wl_container_of(listener, view, request_maximize);
-    struct xdg_view* xdg_view = (struct xdg_view*)view;
+    struct xdg_view* xdg_view = XDG_VIEW(view);
     if (xdg_view->toplevel->base->initialized) {
         wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
     }
@@ -109,44 +113,68 @@ static void xdg_toplevel_request_maximize(struct wl_listener* listener,
 
 static void xdg_toplevel_request_fullscreen(struct wl_listener* listener,
                                             void* data) {
-    // TODO:
+    struct view* view = wl_container_of(listener, view, request_fullscreen);
+    struct xdg_view* xdg_view = XDG_VIEW(view);
+    if (xdg_view->toplevel->base->initialized) {
+        wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
+    }
 }
 
 // IMPL
 
 static void xdg_view_get_geometry(struct view* v, struct wlr_box* box) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     *box = xv->toplevel->base->geometry;
 }
 
 static void xdg_view_set_activated(struct view* v, bool activated) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     wlr_xdg_toplevel_set_activated(xv->toplevel, activated);
 }
 
 static void xdg_view_close(struct view* v) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     wlr_xdg_toplevel_send_close(xv->toplevel);
 }
 
 static const char* xdg_view_get_title(struct view* v) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     return xv->toplevel->title;
 }
 
 static const char* xdg_view_get_app_id(struct view* v) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     return xv->toplevel->app_id;
 }
 
 static bool xdg_view_want_fullscreen(struct view* v) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     return xv->toplevel->requested.fullscreen == true;
 }
 
 static struct wlr_surface* xdg_view_get_surface(struct view* v) {
-    struct xdg_view* xv = (struct xdg_view*)v;
+    struct xdg_view* xv = XDG_VIEW(v);
     return xv->toplevel->base->surface;
+}
+
+// TODO: Stop arrange on fullscreen windows
+static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
+    struct xdg_view* xdg_view = XDG_VIEW(v);
+
+    v->is_fullscreen = fullscreen;
+    wlr_xdg_toplevel_set_fullscreen(xdg_view->toplevel, fullscreen);
+    if (fullscreen) {
+        wlr_scene_node_raise_to_top(&v->scene_tree->node);
+        struct monitor* monitor = v->workspace->col->monitor;
+        xdg_view->base.impl->set_size(v, monitor->output->width,
+                                      monitor->output->height);
+        wlr_scene_node_set_position(&v->scene_tree->node, 0, 0);
+    } else {
+        workspace_arrange(v->workspace);
+    }
+
+    view_borders_set_enabled(v, !fullscreen);
+    wlr_scene_node_reparent(&v->scene_tree->node, v->workspace->tree);
 }
 
 static const struct view_impl xdg_view_impl = {
@@ -158,6 +186,7 @@ static const struct view_impl xdg_view_impl = {
     .get_app_id = xdg_view_get_app_id,
     .want_fullscreen = xdg_view_want_fullscreen,
     .get_surface = xdg_view_get_surface,
+    .set_fullscreen = xdg_view_set_fullscreen,
 };
 
 //

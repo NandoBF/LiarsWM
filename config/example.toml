@@ -21,6 +21,10 @@ action = "spawn"
 args = "rofi -show drun"
 
 [[keybind]]
+keys = "Ctrl+f"
+action = "fullscreen"
+
+[[keybind]]
 keys = "Mod+Shit+C"
 action = "close"
 

@@ -13,9 +13,9 @@
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
+#include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
-#include <wlr/backend/libinput.h>
 #include <xkbcommon/xkbcommon.h>
 
 struct wlr_surface* seat_focused_surface(struct liars_seat* seat) {
@@ -83,9 +83,11 @@ static void seat_new_pointer(struct liars_cursor* cursor,
                              struct wlr_input_device* device) {
 
     if (wlr_input_device_is_libinput(device)) {
-        struct libinput_device* libinput_device = wlr_libinput_get_device_handle(device);
+        struct libinput_device* libinput_device =
+            wlr_libinput_get_device_handle(device);
         if (libinput_device_config_tap_get_finger_count(libinput_device) > 0) {
-            libinput_device_config_tap_set_enabled(libinput_device, LIBINPUT_CONFIG_TAP_ENABLED);
+            libinput_device_config_tap_set_enabled(libinput_device,
+                                                   LIBINPUT_CONFIG_TAP_ENABLED);
         }
     }
     wlr_cursor_attach_input_device(cursor->cursor, device);

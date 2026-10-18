@@ -6,6 +6,7 @@
 #include "server.h"
 #include "wlr/util/log.h"
 #include "workspace.h"
+#include <stdlib.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 
@@ -77,10 +78,18 @@ void focus_view(struct view* view) {
 }
 
 static void map_borders(struct view* view) {
+    if (view->is_fullscreen)
+        return;
     float color[4] = {0.6, 0.0, 0.0, 1.0};
     for (int i = 0; i < 4; i++) {
         view->borders[i] = wlr_scene_rect_create(view->scene_tree, 0, 0, color);
         wlr_scene_node_lower_to_bottom(&view->borders[i]->node);
+    }
+}
+
+void view_borders_set_enabled(struct view* view, bool enabled) {
+    for (int i = 0; i < 4; i++) {
+        wlr_scene_node_set_enabled(&view->borders[i]->node, enabled);
     }
 }
 

@@ -37,6 +37,7 @@ struct view {
     struct wl_listener initial_commit;
 
     struct wlr_scene_rect* borders[4];
+    bool is_fullscreen;
 };
 
 struct view_impl {
@@ -48,6 +49,7 @@ struct view_impl {
     const char* (*get_app_id)(struct view* v);
     bool (*want_fullscreen)(struct view* v);
     struct wlr_surface* (*get_surface)(struct view* v);
+    void (*set_fullscreen)(struct view* v, bool fullscreen);
 };
 
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface);
@@ -57,3 +59,4 @@ void focus_view(struct view* view);
 void view_set_borders(struct view* v, int w, int h);
 void view_map(struct view* view);
 void view_destroy(struct view* view);
+void view_borders_set_enabled(struct view* view, bool enabled);
