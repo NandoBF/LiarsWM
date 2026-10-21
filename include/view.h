@@ -38,6 +38,7 @@ struct view {
 
     struct wlr_scene_rect* borders[4];
     bool is_fullscreen;
+    bool is_floating;
 };
 
 struct view_impl {
@@ -60,3 +61,5 @@ void view_set_borders(struct view* v, int w, int h);
 void view_map(struct view* view);
 void view_destroy(struct view* view);
 void view_borders_set_enabled(struct view* view, bool enabled);
+
+void view_set_fullscreen(struct view* view, bool fullscreen);

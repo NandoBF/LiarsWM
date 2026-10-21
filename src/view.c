@@ -133,3 +133,28 @@ void view_destroy(struct view* view) {
 
     wlr_scene_node_destroy(&view->scene_tree->node);
 }
+
+void view_set_floating(struct view* view, bool floating) {
+    view->is_floating = floating;
+    wl_list_remove(&view->link);
+    if (floating) {
+        wl_list_insert(&view->workspace->floating, &view->link);
+    } else {
+        wl_list_insert(&view->workspace->tiles, &view->link);
+    }
+}
+
+void view_set_fullscreen(struct view* view, bool fullscreen) {
+    view->is_fullscreen = fullscreen;
+    view_set_floating(view, fullscreen);
+
+    if (fullscreen) {
+        wlr_scene_node_raise_to_top(&view->scene_tree->node);
+        wlr_scene_node_set_position(&view->scene_tree->node, 0, 0);
+    } else {
+        workspace_arrange(view->workspace);
+    }
+    view_borders_set_enabled(view, !fullscreen);
+    wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
+    focus_view_under_cursor(view->server); // FIX:
+}

@@ -164,17 +164,11 @@ static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
     v->is_fullscreen = fullscreen;
     wlr_xdg_toplevel_set_fullscreen(xdg_view->toplevel, fullscreen);
     if (fullscreen) {
-        wlr_scene_node_raise_to_top(&v->scene_tree->node);
         struct monitor* monitor = v->workspace->col->monitor;
         xdg_view->base.impl->set_size(v, monitor->output->width,
                                       monitor->output->height);
-        wlr_scene_node_set_position(&v->scene_tree->node, 0, 0);
-    } else {
-        workspace_arrange(v->workspace);
     }
-
-    view_borders_set_enabled(v, !fullscreen);
-    wlr_scene_node_reparent(&v->scene_tree->node, v->workspace->tree);
+    view_set_fullscreen(v, fullscreen);
 }
 
 static const struct view_impl xdg_view_impl = {
