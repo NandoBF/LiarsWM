@@ -1,6 +1,6 @@
 #pragma once
 
-#include "command.h"
+#include "ipc/command.h"
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>

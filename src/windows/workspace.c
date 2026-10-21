@@ -1,7 +1,7 @@
-#include "workspace.h"
-#include "layout.h"
+#include "windows/workspace.h"
+#include "windows/layout.h"
 #include "server.h"
-#include "view.h"
+#include "view/view.h"
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-util.h>

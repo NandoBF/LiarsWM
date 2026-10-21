@@ -1,6 +1,6 @@
 #include "config.h"
-#include "keybind.h"
-#include "parser.h"
+#include "input/keybind.h"
+#include "ipc/parser.h"
 #include "tomlc17.h"
 #include "wlr/util/log.h"
 #include <stdlib.h>

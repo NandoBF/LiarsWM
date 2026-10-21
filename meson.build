@@ -21,23 +21,12 @@ layer_shell_header = custom_target(
   command: [wayland_scanner, 'server-header', '@INPUT@', '@OUTPUT@'],
 )
 
+subdir('src')
+
 executable(
   'liars',
   'liar.c',
-  'src/server.c',
-  'src/workspace.c',
-  'src/input.c',
-  'src/xdg_view.c',
-  'src/view.c',
-  'src/layout.c',
-  'src/ipc.c',
-  'src/command.c',
-  'src/x11_view.c',
-  'src/layer_view.c',
-  'src/pointer_constraint.c',
-  'src/config.c',
-  'src/parser.c',
-  'src/decoration.c',
+  sources,
   layer_shell_header,
   include_directories : incdir,
   dependencies: [wlroots, wayland_server, xkbcommon, libinput, toml]

@@ -1,7 +1,5 @@
-#include "parser.h"
-#include "wlr/util/log.h"
+#include "ipc/parser.h"
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <xkbcommon/xkbcommon-keysyms.h>

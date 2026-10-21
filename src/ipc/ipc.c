@@ -1,5 +1,5 @@
-#include "ipc.h"
-#include "command.h"
+#include "ipc/ipc.h"
+#include "ipc/command.h"
 #include "server.h"
 #include "wlr/util/log.h"
 #include <stdio.h>

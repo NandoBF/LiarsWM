@@ -1,9 +1,9 @@
-#include "layout.h"
+#include "windows/layout.h"
 #include "config.h"
 #include "server.h"
-#include "view.h"
+#include "view/view.h"
 #include "wlr/util/log.h"
-#include "workspace.h"
+#include "windows/workspace.h"
 #include <wayland-util.h>
 
 void workspace_arrange(struct workspace* ws) {

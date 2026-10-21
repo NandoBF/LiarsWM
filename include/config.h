@@ -1,5 +1,5 @@
 #pragma once
-#include "keybind.h"
+#include "input/keybind.h"
 #include "server.h"
 #include <stdint.h>
 #include <unistd.h>

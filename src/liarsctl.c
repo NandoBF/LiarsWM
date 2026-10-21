@@ -31,7 +31,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Join argv[1..] into a single command string
     char cmd[512] = {0};
     for (int i = 1; i < argc; i++) {
         if (i > 1)
@@ -41,7 +40,6 @@ int main(int argc, char* argv[]) {
 
     write(fd, cmd, strlen(cmd));
 
-    // Read and print response
     char buf[4096];
     ssize_t n = read(fd, buf, sizeof(buf) - 1);
     if (n > 0) {

@@ -1,4 +1,4 @@
-#include "input.h"
+#include "input/input.h"
 #include "layer_shell.h"
 #include "server.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"

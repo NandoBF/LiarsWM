@@ -1,11 +1,11 @@
-#include "view.h"
+#include "view/view.h"
 #include "config.h"
-#include "input.h"
-#include "layout.h"
-#include "pointer_contraint.h"
+#include "input/input.h"
+#include "input/pointer_contraint.h"
 #include "server.h"
+#include "windows/layout.h"
+#include "windows/workspace.h"
 #include "wlr/util/log.h"
-#include "workspace.h"
 #include <stdlib.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>

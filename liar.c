@@ -1,9 +1,7 @@
-#include <string.h>
 #include <wayland-server-core.h>
 #include "wlr/util/log.h"
 #include "server.h"
-#include "ipc.h"
-
+#include "ipc/ipc.h"
 
 int main(int argc, char* argv[]) {
     struct liars_server server = {0};

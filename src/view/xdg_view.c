@@ -1,12 +1,11 @@
-#include "xdg_view.h"
+#include "view/xdg_view.h"
+#include "view/view.h"
 #include "config.h"
-#include "input.h"
-#include "layout.h"
+#include "input/input.h"
+#include "windows/layout.h"
+#include "windows/workspace.h"
 #include "server.h"
-#include "view.h"
-#include "wlr/util/edges.h"
 #include "wlr/util/log.h"
-#include "workspace.h"
 #include <stddef.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>

@@ -1,10 +1,10 @@
-#include "command.h"
-#include "input.h"
-#include "keybind.h"
+#include "ipc/command.h"
+#include "input/input.h"
+#include "input/keybind.h"
 #include "server.h"
-#include "view.h"
+#include "view/view.h"
 #include "wlr/util/log.h"
-#include "workspace.h"
+#include "windows/workspace.h"
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>

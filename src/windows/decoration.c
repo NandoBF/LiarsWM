@@ -1,4 +1,4 @@
-#include "decoration.h"
+#include "windows/decoration.h"
 #include <stdlib.h>
 
 static void decoration_handle_request_mode(struct wl_listener* listener,

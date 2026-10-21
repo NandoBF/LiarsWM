@@ -1,11 +1,10 @@
-#include "x11_view.h"
+#include "view/x11_view.h"
 #include "config.h"
-#include "input.h"
-#include "layout.h"
+#include "input/input.h"
+#include "windows/layout.h"
 #include "server.h"
-#include "view.h"
 #include "wlr/util/log.h"
-#include "workspace.h"
+#include "windows/workspace.h"
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 

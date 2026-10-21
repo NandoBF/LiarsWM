@@ -1,5 +1,5 @@
 #pragma once
-#include "view.h"
+#include "view/view.h"
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/xwayland/xwayland.h>
