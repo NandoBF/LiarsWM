@@ -1,10 +1,10 @@
 #include "view/xdg_view.h"
-#include "view/view.h"
 #include "config.h"
 #include "input/input.h"
+#include "server.h"
+#include "view/view.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"
-#include "server.h"
 #include "wlr/util/log.h"
 #include <stddef.h>
 #include <stdlib.h>

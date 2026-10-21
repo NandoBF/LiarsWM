@@ -3,8 +3,8 @@
 #include "input/keybind.h"
 #include "server.h"
 #include "view/view.h"
-#include "wlr/util/log.h"
 #include "windows/workspace.h"
+#include "wlr/util/log.h"
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>
