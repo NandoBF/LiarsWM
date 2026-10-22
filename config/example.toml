@@ -25,10 +25,6 @@ keys = "Ctrl+f"
 action = "fullscreen"
 
 [[keybind]]
-keys = "Mod+Shit+C"
-action = "close"
-
-[[keybind]]
 keys = "Mod+%d"
 action = "workspace"
 args = "%d"

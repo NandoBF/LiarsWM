@@ -64,16 +64,8 @@ void send_to_workspace_command(struct liars_server* server,
 }
 
 void close_focused(struct liars_server* server, const char* command) {
-    struct wlr_surface* focused = seat_focused_surface(server->seat);
-    if (!focused)
-        return;
-
-    struct wlr_xdg_toplevel* toplevel =
-        wlr_xdg_toplevel_try_from_wlr_surface(focused);
-    if (!toplevel)
-        return;
-
-    wlr_xdg_toplevel_send_close(toplevel);
+    struct view* view = get_focused_view(server);
+    view->impl->close(view);
 }
 
 void fullscreen(struct liars_server* server, const char* command) {
