@@ -19,9 +19,16 @@ struct workspace* workspace_create(struct column* col) {
     struct workspace* ws = calloc(1, sizeof(*ws));
     ws->col = col;
     ws->level = col->last_level++;
-    ws->tree = wlr_scene_tree_create(&col->server->scene->tree);
-    wl_list_init(&ws->tiles);
-    wl_list_init(&ws->floating);
+    ws->TREE = wlr_scene_tree_create(&col->server->scene->tree);
+
+    // bottom-to-top creation order so they render correctly
+    ws->views.layer_tiled = wlr_scene_tree_create(ws->TREE);
+    ws->views.layer_floating = wlr_scene_tree_create(ws->TREE);
+    ws->views.layer_fullscreen = wlr_scene_tree_create(ws->TREE);
+    wl_list_init(&ws->views.tiles);
+    wl_list_init(&ws->views.floating);
+    ws->views.fullscreen = NULL;
+
     wl_list_insert(&col->levels, &ws->link);
     ws->layout = &tiling_layout;
     ws->needs_arrange = true;
@@ -34,11 +41,27 @@ int send_to_workspace(struct workspace* new, struct view* view) {
 
     struct workspace* old = view->workspace;
 
+    // remove any fullscreen view so its not annoying
+    if (new->views.fullscreen != NULL) {
+        view_set_fullscreen(new->views.fullscreen, false);
+    }
+
     wl_list_remove(&view->link);
-    wl_list_insert(&new->tiles, &view->link);
+    if (view->is_floating) {
+        wl_list_insert(&new->views.floating, &view->link);
+        wlr_scene_node_reparent(&view->scene_tree->node,
+                                new->views.layer_floating);
+    } else if (view->is_fullscreen) {
+        new->views.fullscreen = view;
+        wlr_scene_node_reparent(&view->scene_tree->node,
+                                new->views.layer_fullscreen);
+    } else {
+        wl_list_insert(&new->views.tiles, &view->link);
+        wlr_scene_node_reparent(&view->scene_tree->node,
+                                new->views.layer_tiled);
+    }
 
     view->workspace = new;
-    wlr_scene_node_reparent(&view->scene_tree->node, new->tree);
 
     if (old && old->layout) {
         workspace_arrange(old);
@@ -72,4 +95,33 @@ struct column* column_get_or_create(struct liars_server* server,
 
     workspace_create(col);
     return col;
+}
+
+void workspace_set_fullscreen(struct view* view) {
+    wlr_scene_node_raise_to_top(&view->scene_tree->node);
+    wlr_scene_node_set_position(&view->scene_tree->node, 0, 0);
+    wlr_scene_node_reparent(&view->scene_tree->node,
+                            view->workspace->views.layer_fullscreen);
+    view->workspace->views.fullscreen = view;
+    // workspace_arrange(view->workspace);
+}
+
+// perhaps remove would be a better name, but if youre coming from set, unset is
+// better
+void workspace_unset_fullscreen(struct workspace* ws, struct view* view) {
+    ws->views.fullscreen = NULL;
+    wlr_scene_node_reparent(&view->scene_tree->node,
+                            view->workspace->views.layer_tiled);
+    workspace_arrange(ws);
+}
+
+void workspace_spawn(struct workspace* ws, struct view* view) {
+    if (ws->views.fullscreen) {
+        view_set_fullscreen(ws->views.fullscreen, false);
+    }
+
+    view->workspace = ws;
+    wlr_scene_node_reparent(&view->scene_tree->node, ws->views.layer_tiled);
+    wl_list_insert(&view->workspace->views.tiles, &view->link);
+    workspace_arrange(ws);
 }

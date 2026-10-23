@@ -56,7 +56,7 @@ void focus_view(struct view* view) {
     struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
     wlr_scene_node_raise_to_top(&view->scene_tree->node);
     wl_list_remove(&view->link);
-    wl_list_insert(&view->workspace->tiles, &view->link);
+    wl_list_insert(&view->workspace->views.tiles, &view->link);
 
     struct wlr_pointer_constraint_v1* new_constraint =
         wlr_pointer_constraints_v1_constraint_for_surface(pc->constraints,
@@ -94,6 +94,10 @@ void view_borders_set_enabled(struct view* view, bool enabled) {
 }
 
 void view_set_borders(struct view* v, int w, int h) {
+    if (w < 0)
+        w = 0;
+    if (h < 0)
+        h = 0;
     struct config* config = v->server->config;
     wlr_scene_rect_set_size(v->borders[0], w, config->border_width);
     wlr_scene_node_set_position(&v->borders[0]->node, 0, 0);
@@ -112,13 +116,9 @@ void view_set_borders(struct view* v, int w, int h) {
 
 void view_map(struct view* view) {
     view->mapped = true;
-    view->workspace = get_active_workspace(view->server);
-    wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
-    wl_list_insert(&view->workspace->tiles, &view->link);
-
     map_borders(view);
+    workspace_spawn(get_active_workspace(view->server), view);
 
-    workspace_arrange(view->workspace);
     focus_view(view);
 }
 
@@ -138,23 +138,26 @@ void view_set_floating(struct view* view, bool floating) {
     view->is_floating = floating;
     wl_list_remove(&view->link);
     if (floating) {
-        wl_list_insert(&view->workspace->floating, &view->link);
+        wl_list_insert(&view->workspace->views.floating, &view->link);
+        wlr_scene_node_reparent(&view->scene_tree->node,
+                                view->workspace->views.layer_floating);
     } else {
-        wl_list_insert(&view->workspace->tiles, &view->link);
+        wl_list_insert(&view->workspace->views.tiles, &view->link);
+        wlr_scene_node_reparent(&view->scene_tree->node,
+                                view->workspace->views.layer_tiled);
     }
 }
 
+// TAG: Fullscreen
 void view_set_fullscreen(struct view* view, bool fullscreen) {
     view->is_fullscreen = fullscreen;
-    view_set_floating(view, fullscreen);
 
+    // no need to remove the view from its previous layer I believe
     if (fullscreen) {
-        wlr_scene_node_raise_to_top(&view->scene_tree->node);
-        wlr_scene_node_set_position(&view->scene_tree->node, 0, 0);
+        workspace_set_fullscreen(view);
     } else {
-        workspace_arrange(view->workspace);
+        workspace_unset_fullscreen(view->workspace, view);
     }
     view_borders_set_enabled(view, !fullscreen);
-    wlr_scene_node_reparent(&view->scene_tree->node, view->workspace->tree);
-    focus_view_under_cursor(view->server); // FIX:
+    // focus_view_under_cursor(view->server); // FIX:
 }

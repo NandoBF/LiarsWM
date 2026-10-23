@@ -24,14 +24,14 @@ void workspace_arrange(struct workspace* ws) {
 
 static void layout_master_stack(struct workspace* ws, int x, int y, int width,
                                 int height, int inner_gap) {
-    int n = wl_list_length(&ws->tiles);
+    int n = wl_list_length(&ws->views.tiles);
     if (n == 0)
         return;
 
     int master_width = (n == 1) ? width : width / 2;
     int i = 0;
     struct view* view;
-    wl_list_for_each(view, &ws->tiles, link) {
+    wl_list_for_each(view, &ws->views.tiles, link) {
         int view_x, view_y, view_w, view_h;
         if (i == 0) {
             view_x = x;
@@ -60,7 +60,7 @@ static void layout_master_stack(struct workspace* ws, int x, int y, int width,
 static void layout_tiling(struct workspace* ws, int x, int y, int width,
                           int height, int inner_gap) {
     wlr_log(WLR_DEBUG, "Tiling");
-    int n = wl_list_length(&ws->tiles);
+    int n = wl_list_length(&ws->views.tiles);
     if (n == 0)
         return;
 
@@ -71,7 +71,7 @@ static void layout_tiling(struct workspace* ws, int x, int y, int width,
 
     int i = 0;
     struct view* view;
-    wl_list_for_each(view, &ws->tiles, link) {
+    wl_list_for_each(view, &ws->views.tiles, link) {
         int w = current_w;
         int h = current_h;
 

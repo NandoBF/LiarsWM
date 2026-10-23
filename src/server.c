@@ -31,11 +31,11 @@ struct view* get_focused_view(struct liars_server* server) {
         struct workspace* ws;
         wl_list_for_each(ws, &col->levels, link) {
             struct view* v;
-            wl_list_for_each(v, &ws->tiles, link) {
+            wl_list_for_each(v, &ws->views.tiles, link) {
                 if (v->surface == focused_surface)
                     return v;
             }
-            wl_list_for_each(v, &ws->floating, link) {
+            wl_list_for_each(v, &ws->views.floating, link) {
                 if (v->surface == focused_surface)
                     return v;
             }
@@ -66,8 +66,9 @@ void switch_to_column(struct liars_server* server, const char* name) {
                 return;
 
             if (old)
-                wlr_scene_node_set_enabled(&old->tree->node, false);
-            wlr_scene_node_set_enabled(&new->tree->node, true);
+                wlr_scene_node_set_enabled(&old->TREE->node,
+                                           false); // TODO: WRAP
+            wlr_scene_node_set_enabled(&new->TREE->node, true);
 
             server->active_workspace = new;
             focus_view_under_cursor(server);
@@ -155,7 +156,7 @@ static void server_new_output(struct wl_listener* listener, void* data) {
 
         server->active_workspace =
             wl_container_of(col->levels.next, (struct workspace*)NULL, link);
-        wlr_scene_node_set_enabled(&server->active_workspace->tree->node, true);
+        wlr_scene_node_set_enabled(&server->active_workspace->TREE->node, true);
     }
 }
 
@@ -211,10 +212,15 @@ void focus_view_under_cursor(struct liars_server* server) {
         struct workspace* ws = server->active_workspace;
         if (ws) {
             struct view* fallback = NULL;
-            if (!wl_list_empty(&ws->floating)) {
-                fallback = wl_container_of(ws->floating.next, fallback, link);
-            } else if (!wl_list_empty(&ws->tiles)) {
-                fallback = wl_container_of(ws->tiles.next, fallback, link);
+            if (ws->views.fullscreen) {
+                fallback = ws->views.fullscreen;
+            }
+            if (!wl_list_empty(&ws->views.floating)) {
+                fallback =
+                    wl_container_of(ws->views.floating.next, fallback, link);
+            } else if (!wl_list_empty(&ws->views.tiles)) {
+                fallback =
+                    wl_container_of(ws->views.tiles.next, fallback, link);
             }
 
             if (fallback) {

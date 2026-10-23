@@ -156,7 +156,6 @@ static struct wlr_surface* xdg_view_get_surface(struct view* v) {
     return xv->toplevel->base->surface;
 }
 
-// TODO: Stop arrange on fullscreen windows
 static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
     struct xdg_view* xdg_view = XDG_VIEW(v);
 
