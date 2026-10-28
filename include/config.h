@@ -2,6 +2,7 @@
 #include "input/keybind.h"
 #include "server.h"
 #include <stdint.h>
+#include <time.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -19,6 +20,8 @@ struct config {
 
     struct liars_keybind** keybinds;
     int keybind_num;
+
+    time_t last_modified_at;
 };
 
 struct config* load_config(const char* config_path);

@@ -39,6 +39,10 @@ keys = "Ctrl+z"
 action = "float"
 
 [[keybind]]
+keys = "Ctrl+r"
+action = "reload"
+
+[[keybind]]
 keys = "Ctrl+Space"
 action = "spawn"
 args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspace {}"

@@ -1,4 +1,5 @@
 #include "ipc/command.h"
+#include "config.h"
 #include "input/input.h"
 #include "input/keybind.h"
 #include "server.h"
@@ -7,6 +8,7 @@
 #include "wlr/util/log.h"
 #include <fcntl.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <wayland-util.h>
@@ -84,10 +86,19 @@ void floating(struct liars_server* server, const char* command) {
     view_set_floating(view, !view->is_floating);
 }
 
+void reload_config(struct liars_server* server, const char* command) {
+    struct config* new_conf = load_config("./config/example.toml");
+    if (new_conf) {
+        free(server->config);
+        server->config = new_conf;
+    }
+}
+
 static const struct command_def commands[] = {
     {"spawn", spawn_command},   {"workspace", workspace_command},
     {"close", close_focused},   {"workspacesend", send_to_workspace_command},
-    {"fullscreen", fullscreen}, {"float", floating}};
+    {"fullscreen", fullscreen}, {"float", floating},
+    {"reload", reload_config}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd) {
 

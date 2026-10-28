@@ -4,6 +4,7 @@
 #include "tomlc17.h"
 #include "wlr/util/log.h"
 #include <stdlib.h>
+#include <sys/stat.h>
 
 // TODO: Refactor config struct access?
 
@@ -70,7 +71,15 @@ static void load_keybinds(struct config* c, toml_datum_t root) {
 struct config* load_config(const char* config_path) {
     struct config* c = calloc(1, sizeof(*c));
     // FIX:
-    c->keybinds = calloc(100, sizeof(struct liars_keybind*));
+    c->keybinds = calloc(20, sizeof(struct liars_keybind*));
+
+    struct stat file_stat;
+    int err = stat(config_path, &file_stat);
+    if (err != 0) {
+        wlr_log(WLR_DEBUG, "Stat error");
+        return false;
+    }
+    c->last_modified_at = file_stat.st_mtim.tv_sec;
 
     toml_result_t result = toml_parse_file_ex(config_path);
 
@@ -87,5 +96,16 @@ struct config* load_config(const char* config_path) {
 
     wlr_log(WLR_INFO, "Got inner gap: %d", c->inner_gap);
 
+    toml_free(result);
     return c;
+}
+
+bool was_config_modified(struct config* config, const char* config_path) {
+    struct stat file_stat;
+    int err = stat(config_path, &file_stat);
+    if (err != 0) {
+        wlr_log(WLR_DEBUG, "Stat error");
+        return false;
+    }
+    return file_stat.st_mtim.tv_sec > config->last_modified_at;
 }
