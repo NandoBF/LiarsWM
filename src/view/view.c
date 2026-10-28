@@ -55,8 +55,8 @@ void focus_view(struct view* view) {
 
     struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
     wlr_scene_node_raise_to_top(&view->scene_tree->node);
-    wl_list_remove(&view->link);
-    wl_list_insert(&view->workspace->views.tiles, &view->link);
+    // wl_list_remove(&view->link); ??? What was this here for
+    // wl_list_insert(&view->workspace->views.tiles, &view->link);
 
     struct wlr_pointer_constraint_v1* new_constraint =
         wlr_pointer_constraints_v1_constraint_for_surface(pc->constraints,
@@ -153,6 +153,9 @@ void view_destroy(struct view* view) {
 }
 
 void view_set_floating(struct view* view, bool floating) {
+    if (view->is_fullscreen)
+        return; // I prefer that it does nothing
+
     view->is_floating = floating;
     wl_list_remove(&view->link);
     if (floating) {
@@ -168,6 +171,9 @@ void view_set_floating(struct view* view, bool floating) {
 
 // TAG: Fullscreen
 void view_set_fullscreen(struct view* view, bool fullscreen) {
+    if (view->is_floating)
+        view_set_floating(view, false);
+
     view->is_fullscreen = fullscreen;
 
     // no need to remove the view from its previous layer I believe

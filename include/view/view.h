@@ -63,4 +63,5 @@ void view_map(struct view* view);
 void view_destroy(struct view* view);
 void view_borders_set_enabled(struct view* view, bool enabled);
 
+void view_set_floating(struct view* view, bool floating);
 void view_set_fullscreen(struct view* view, bool fullscreen);

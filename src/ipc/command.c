@@ -72,15 +72,22 @@ void close_focused(struct liars_server* server, const char* command) {
 
 void fullscreen(struct liars_server* server, const char* command) {
     struct view* view = get_focused_view(server);
+    if (view == NULL)
+        return;
     view->impl->set_fullscreen(view, !view->is_fullscreen);
 }
 
+void floating(struct liars_server* server, const char* command) {
+    struct view* view = get_focused_view(server);
+    if (view == NULL)
+        return;
+    view_set_floating(view, !view->is_floating);
+}
+
 static const struct command_def commands[] = {
-    {"spawn", spawn_command},
-    {"workspace", workspace_command},
-    {"close", close_focused},
-    {"workspacesend", send_to_workspace_command},
-    {"fullscreen", fullscreen}};
+    {"spawn", spawn_command},   {"workspace", workspace_command},
+    {"close", close_focused},   {"workspacesend", send_to_workspace_command},
+    {"fullscreen", fullscreen}, {"float", floating}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd) {
 
