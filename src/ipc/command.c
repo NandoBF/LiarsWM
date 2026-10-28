@@ -65,6 +65,8 @@ void send_to_workspace_command(struct liars_server* server,
 
 void close_focused(struct liars_server* server, const char* command) {
     struct view* view = get_focused_view(server);
+    if (view == NULL)
+        return;
     view->impl->close(view);
 }
 
