@@ -1,46 +1,75 @@
 #!/usr/bin/env bash
 
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
+
+while [[ ! -d "src" && ! -d "include" ]]; do
+    if [[ "$PWD" == "/" ]]; then
+        echo "No src/ or include/ directories found in parent directories."
+        exit 1
+    fi
+    cd ..
+done
+
 FMT=""
 
-for clangfmt in clang-format{,-{4,3}.{9,8,7,6,5,4,3,2,1,0}}; do
-    if which "$clangfmt" &>/dev/null; then
+for clangfmt in clang-format{,-{20..3}}; do
+    if command -v "$clangfmt" &>/dev/null; then
         FMT="$clangfmt"
         break
     fi
 done
 
-if [ -z "$FMT" ]; then
-    echo "failed to find clang-format"
+if [[ -z "$FMT" ]]; then
+    echo "Error: failed to find clang-format"
     exit 1
 fi
 
-function format_file() {
-    file_path=${1}
-    echo "format ${file_path}";
-    ${FMT} -style=file -i "${file_path}"
-}
+echo "Using ${FMT}..."
 
-function format_dir() {
-    oldIFS=$IFS
-    IFS=$'\n'
+files_to_check=()
+files_to_format=()
 
-    for f in $(find $@ -type d \
-                       -name '*.h' -or \
-                       -name '*.c'); do
-        format_file "${f}";
-    done
+SEARCH_DIRS=()
+[[ -d "src" ]] && SEARCH_DIRS+=("src")
+[[ -d "include" ]] && SEARCH_DIRS+=("include")
 
-    IFS=$oldIFS
+if [[ ${#SEARCH_DIRS[@]} -gt 0 ]]; then
+    while IFS= read -r -d '' file; do
+        files_to_check+=("$file")
+    done < <(find -L "${SEARCH_DIRS[@]}" -type f \( -name '*.c' -o -name '*.h' \) -print0)
+fi
 
-    echo "~~~ $@ Done ~~~";
-}
+if [[ ${#files_to_check[@]} -eq 0 ]]; then
+    echo "No .c or .h files found in src/ or include/."
+    exit 0
+fi
 
-for x in $@; do
-    if [ -f "${x}" ]; then
-        format_file "${x}"
-    elif [ -d "${x}" ]; then
-        format_dir "${x}";
-    else
-        echo "Invalid path: ${x}"
+echo "Scanning ${#files_to_check[@]} files..."
+
+for file in "${files_to_check[@]}"; do
+    if "$FMT" -style=file -output-replacements-xml "$file" | grep -q "<replacement "; then
+        echo "Needs formatting: $file"
+        files_to_format+=("$file")
     fi
 done
+
+if [[ ${#files_to_format[@]} -eq 0 ]]; then
+    echo "All files are already properly formatted!"
+    exit 0
+fi
+
+echo ""
+read -p "Do you want to format these ${#files_to_format[@]} files? [y/N]: " choice
+
+case "$choice" in 
+    y|Y )
+        for file in "${files_to_format[@]}"; do
+            echo "Formatting $file..."
+            "$FMT" -style=file -i "$file"
+        done
+        echo "~~~ Done ~~~"
+        ;;
+    * )
+        echo "Formatting aborted. No files were changed."
+        ;;
+esac
