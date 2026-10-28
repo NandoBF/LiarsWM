@@ -27,6 +27,19 @@ bool is_view_focused(struct view* view) {
     return focused_surface == view->surface;
 }
 
+struct monitor* view_get_monitor(struct view* view) {
+    return view->workspace->col->monitor;
+}
+
+void view_move_to_center(struct view* view) {
+    struct monitor* monitor = view_get_monitor(view);
+    struct wlr_box box;
+    view->impl->get_geometry(view, &box);
+    int x = (monitor->output->width - box.width) / 2;
+    int y = (monitor->output->height - box.height) / 2;
+    wlr_scene_node_set_position(&view->scene_tree->node, x, y);
+}
+
 void focus_view(struct view* view) {
     if (view == NULL) {
         return;
@@ -162,11 +175,13 @@ void view_set_floating(struct view* view, bool floating) {
         wl_list_insert(&view->workspace->views.floating, &view->link);
         wlr_scene_node_reparent(&view->scene_tree->node,
                                 view->workspace->views.layer_floating);
+        view_move_to_center(view);
     } else {
         wl_list_insert(&view->workspace->views.tiles, &view->link);
         wlr_scene_node_reparent(&view->scene_tree->node,
                                 view->workspace->views.layer_tiled);
     }
+    workspace_arrange(view->workspace);
 }
 
 // TAG: Fullscreen

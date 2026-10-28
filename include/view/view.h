@@ -54,6 +54,7 @@ struct view_impl {
     void (*set_fullscreen)(struct view* v, bool fullscreen);
 };
 
+struct monitor* view_get_monitor(struct view* view);
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface);
 bool is_view_focused(struct view* view);
 void focus_view(struct view* view);
