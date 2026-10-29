@@ -96,7 +96,7 @@ struct config* load_config(const char* config_path) {
 
     wlr_log(WLR_INFO, "Got inner gap: %d", c->inner_gap);
 
-    toml_free(result);
+    //toml_free(result); FIX: For some reason keybinds dont work with this
     return c;
 }
 
