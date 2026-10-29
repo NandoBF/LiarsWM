@@ -136,34 +136,9 @@ void view_map(struct view* view) {
 }
 
 // This does not free the view. It must be freed after
-void view_destroy(struct view* view) {
-
-    if (view->commit.link.next != NULL) {
-        wl_list_remove(&view->commit.link);
-    }
-
-    if (view->destroy.link.next != NULL) {
-        wl_list_remove(&view->destroy.link);
-    }
-
-    if (view->request_move.link.next != NULL) {
-        wl_list_remove(&view->request_move.link);
-    }
-
-    if (view->request_resize.link.next != NULL) {
-        wl_list_remove(&view->request_resize.link);
-    }
-
-    if (view->request_maximize.link.prev != NULL) {
-        wl_list_remove(&view->request_maximize.link);
-    }
-
-    if (view->request_fullscreen.link.prev != NULL) {
-        wl_list_remove(&view->request_fullscreen.link);
-    }
-
-    wlr_scene_node_destroy(&view->scene_tree->node);
-}
+// Common destroy behavior for all views
+// All behavior in this function must be safe to run by all view types
+void view_destroy(struct view* view) { focus_view_under_cursor(view->server); }
 
 void view_set_floating(struct view* view, bool floating) {
     if (view->is_fullscreen)

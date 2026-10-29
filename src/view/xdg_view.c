@@ -82,9 +82,15 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
 
     wl_list_remove(&view->map.link);
     wl_list_remove(&view->unmap.link);
-    view_destroy(view);
+    wl_list_remove(&view->commit.link);
+    wl_list_remove(&view->destroy.link);
+    wl_list_remove(&view->request_move.link);
+    wl_list_remove(&view->request_resize.link);
+    wl_list_remove(&view->request_maximize.link);
+    wl_list_remove(&view->request_fullscreen.link);
 
-    focus_view_under_cursor(view->server);
+    wlr_scene_node_destroy(&view->scene_tree->node);
+    view_destroy(view);
     free(view);
 }
 

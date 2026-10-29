@@ -2,6 +2,7 @@
 #include "config.h"
 #include "input/input.h"
 #include "server.h"
+#include "view/view.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"
 #include "wlr/util/log.h"
@@ -139,23 +140,14 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, destroy);
     struct x11_view* x11_v = X11_VIEW(view);
 
-    if (x11_v->associate.link.next != NULL) {
-        wl_list_remove(&x11_v->associate.link);
-    }
+    wl_list_remove(&x11_v->associate.link);
+    wl_list_remove(&x11_v->dissociate.link);
+    wl_list_remove(&x11_v->request_configure.link);
+    wl_list_remove(&x11_v->grab_focus.link);
+    wl_list_remove(&view->destroy.link);
 
-    if (x11_v->dissociate.link.next != NULL) {
-        wl_list_remove(&x11_v->dissociate.link);
-    }
-
-    if (x11_v->request_configure.link.next != NULL) {
-        wl_list_remove(&x11_v->request_configure.link);
-    }
-
-    if (x11_v->grab_focus.link.next != NULL) {
-        wl_list_remove(&x11_v->grab_focus.link);
-    }
+    wlr_scene_node_destroy(&view->scene_tree->node);
     view_destroy(view);
-
     free(view);
 }
 
