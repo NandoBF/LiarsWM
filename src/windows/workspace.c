@@ -74,6 +74,7 @@ int send_to_workspace(struct workspace* new, struct view* view) {
     return 1;
 }
 
+// PERF: I hate strings
 struct column* column_get_or_create(struct liars_server* server,
                                     struct monitor* monitor, const char* name) {
     if (!is_column_name_valid(name))
@@ -89,6 +90,7 @@ struct column* column_get_or_create(struct liars_server* server,
     col->server = server;
     col->monitor = monitor;
     col->name = strdup(name);
+    col->name_size = strlen(col->name);
     wl_list_init(&col->levels);
     col->last_level = 0;
     wl_list_insert(&server->columns, &col->link);

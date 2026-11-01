@@ -1,5 +1,6 @@
 #pragma once
 #include "server.h"
+#include <stddef.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -22,6 +23,7 @@ struct column {
 
     struct monitor* monitor;
     char* name;
+    size_t name_size;
     struct wl_list levels;
     int last_level;
 };

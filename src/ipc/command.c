@@ -14,7 +14,8 @@
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
 
-void spawn_command(struct liars_server* server, const char* command) {
+void spawn_command(struct liars_server* server, const char* command,
+                   int client_fd) {
     wlr_log(WLR_INFO, "Spawning: %s", command);
     if (fork() == 0) {
         setsid();
@@ -41,12 +42,13 @@ void spawn_command(struct liars_server* server, const char* command) {
     }
 }
 
-void workspace_command(struct liars_server* server, const char* command) {
+void workspace_command(struct liars_server* server, const char* command,
+                       int client_fd) {
     switch_to_column(server, command);
 }
 
-void send_to_workspace_command(struct liars_server* server,
-                               const char* command) {
+void send_to_workspace_command(struct liars_server* server, const char* command,
+                               int client_fd) {
     struct view* view = get_focused_view(server);
     if (!view)
         return;
@@ -65,28 +67,31 @@ void send_to_workspace_command(struct liars_server* server,
     }
 }
 
-void close_focused(struct liars_server* server, const char* command) {
+void close_focused(struct liars_server* server, const char* command,
+                   int client_fd) {
     struct view* view = get_focused_view(server);
     if (view == NULL)
         return;
     view->impl->close(view);
 }
 
-void fullscreen(struct liars_server* server, const char* command) {
+void fullscreen(struct liars_server* server, const char* command,
+                int client_fd) {
     struct view* view = get_focused_view(server);
     if (view == NULL)
         return;
     view->impl->set_fullscreen(view, !view->is_fullscreen);
 }
 
-void floating(struct liars_server* server, const char* command) {
+void floating(struct liars_server* server, const char* command, int client_fd) {
     struct view* view = get_focused_view(server);
     if (view == NULL)
         return;
     view_set_floating(view, !view->is_floating);
 }
 
-void reload_config(struct liars_server* server, const char* command) {
+void reload_config(struct liars_server* server, const char* command,
+                   int client_fd) {
     struct config* new_conf = load_config("./config/example.toml");
     if (new_conf) {
         free(server->config);
@@ -94,13 +99,32 @@ void reload_config(struct liars_server* server, const char* command) {
     }
 }
 
+void get_workspaces(struct liars_server* server, const char* command,
+                    int client_fd) {
+    struct column* col;
+    wl_list_for_each(col, &server->columns, link) {
+        struct workspace* ws;
+        int i = 0;
+        size_t size = col->name_size + 15;
+        char str[size];
+        wl_list_for_each(ws, &col->levels, link) {
+            int len = snprintf(str, size, "%s at level %d\n", col->name, i);
+            if (len > 0 && client_fd != -1) {
+                write(client_fd, str, len);
+            }
+            i++;
+        }
+    }
+}
+
 static const struct command_def commands[] = {
     {"spawn", spawn_command},   {"workspace", workspace_command},
     {"close", close_focused},   {"workspacesend", send_to_workspace_command},
     {"fullscreen", fullscreen}, {"float", floating},
-    {"reload", reload_config}};
+    {"reload", reload_config},  {"all-workspaces", get_workspaces}};
 
-const char* handle_command_input(struct liars_server* server, const char* cmd) {
+const char* handle_command_input(struct liars_server* server, const char* cmd,
+                                 int client_fd) {
 
     char cmd_copy[strlen(cmd) + 1];
     strcpy(cmd_copy, cmd);
@@ -110,7 +134,7 @@ const char* handle_command_input(struct liars_server* server, const char* cmd) {
 
     for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
         if (!strcmp(parsed_command_name, commands[i].name)) {
-            commands[i].execute(server, command_args);
+            commands[i].execute(server, command_args, client_fd);
             break;
         }
     }
@@ -124,7 +148,9 @@ void execute_keybind(struct liars_server* server,
 
     for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
         if (!strcmp(bind->action, commands[i].name)) {
-            commands[i].execute(server, bind->args);
+            commands[i].execute(
+                server, bind->args,
+                -1); // all writes need to check if the fd is -1!
             return;
         }
     }

@@ -26,9 +26,7 @@ static int ipc_handle_connection(int fd, uint32_t mask, void* data) {
 
         wlr_log(WLR_DEBUG, "IPC received: '%s'", buf);
 
-        const char* result = handle_command_input(ipc->server, buf);
-        const char* resp = result ? result : "ok\n";
-        write(client_fd, resp, strlen(resp));
+        handle_command_input(ipc->server, buf, client_fd);
     }
 
     close(client_fd);

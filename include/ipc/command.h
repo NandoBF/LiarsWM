@@ -15,7 +15,8 @@ struct command_state {
     int len;
 };
 
-typedef void (*command_fn)(struct liars_server* server, const char* args);
+typedef void (*command_fn)(struct liars_server* server, const char* args,
+                           int client_fd);
 
 struct command_def {
     const char* name;
@@ -27,6 +28,7 @@ struct alias {
     const char* command;
 };
 
-const char* handle_command_input(struct liars_server* server, const char* cmd);
+const char* handle_command_input(struct liars_server* server, const char* cmd,
+                                 int client_fd);
 void execute_keybind(struct liars_server* server,
                      const struct liars_keybind* bind);

@@ -40,9 +40,9 @@ int main(int argc, char* argv[]) {
 
     write(fd, cmd, strlen(cmd));
 
-    char buf[4096];
-    ssize_t n = read(fd, buf, sizeof(buf) - 1);
-    if (n > 0) {
+    char buf[4096]; // too much?
+    ssize_t n;
+    while ((n = read(fd, buf, sizeof(buf) - 1)) > 0) {
         buf[n] = '\0';
         printf("%s", buf);
     }
