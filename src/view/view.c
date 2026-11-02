@@ -81,7 +81,6 @@ void focus_view(struct view* view) {
     }
 
     view->impl->set_activated(view, true);
-    wlr_log(WLR_DEBUG, "Focused: %s", view->impl->get_title(view));
 
     if (keyboard != NULL) {
         wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes,
@@ -159,7 +158,6 @@ void view_set_floating(struct view* view, bool floating) {
     workspace_arrange(view->workspace);
 }
 
-// TAG: Fullscreen
 void view_set_fullscreen(struct view* view, bool fullscreen) {
     if (view->is_floating)
         view_set_floating(view, false);

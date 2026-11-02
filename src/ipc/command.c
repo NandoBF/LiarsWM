@@ -1,6 +1,5 @@
 #include "ipc/command.h"
 #include "config.h"
-#include "input/input.h"
 #include "input/keybind.h"
 #include "server.h"
 #include "view/view.h"
@@ -15,9 +14,9 @@
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
 
-// TODO: Standardize command functions name
+// NOTE: Command functions should start with the 'command' word
 
-void spawn_command(struct liars_server* server, const char* command,
+void command_spawn(struct liars_server* server, const char* command,
                    int client_fd) {
     wlr_log(WLR_INFO, "Spawning: %s", command);
     if (fork() == 0) {
@@ -45,12 +44,12 @@ void spawn_command(struct liars_server* server, const char* command,
     }
 }
 
-void workspace_command(struct liars_server* server, const char* command,
+void command_to_column(struct liars_server* server, const char* command,
                        int client_fd) {
     switch_to_column(server, command);
 }
 
-void send_to_workspace_command(struct liars_server* server, const char* command,
+void command_send_to_workspace(struct liars_server* server, const char* command,
                                int client_fd) {
     struct view* view = get_focused_view(server);
     if (!view)
@@ -69,31 +68,32 @@ void send_to_workspace_command(struct liars_server* server, const char* command,
     }
 }
 
-void close_focused(struct liars_server* server, const char* command,
-                   int client_fd) {
+void command_close_focused(struct liars_server* server, const char* command,
+                           int client_fd) {
     struct view* view = get_focused_view(server);
     if (view == NULL)
         return;
     view->impl->close(view);
 }
 
-void fullscreen(struct liars_server* server, const char* command,
-                int client_fd) {
+void command_set_fullscreen(struct liars_server* server, const char* command,
+                            int client_fd) {
     struct view* view = get_focused_view(server);
     if (view == NULL)
         return;
     view->impl->set_fullscreen(view, !view->is_fullscreen);
 }
 
-void floating(struct liars_server* server, const char* command, int client_fd) {
+void command_set_floating(struct liars_server* server, const char* command,
+                          int client_fd) {
     struct view* view = get_focused_view(server);
     if (view == NULL)
         return;
     view_set_floating(view, !view->is_floating);
 }
 
-void reload_config(struct liars_server* server, const char* command,
-                   int client_fd) {
+void command_reload_config(struct liars_server* server, const char* command,
+                           int client_fd) {
     struct config* new_conf = load_config("./config/example.toml");
     if (new_conf) {
         free(server->config);
@@ -101,8 +101,8 @@ void reload_config(struct liars_server* server, const char* command,
     }
 }
 
-void get_workspaces(struct liars_server* server, const char* command,
-                    int client_fd) {
+void command_get_workspaces(struct liars_server* server, const char* command,
+                            int client_fd) {
     struct column* col;
     wl_list_for_each(col, &server->columns, link) {
         size_t size = col->name_size + 15;
@@ -137,14 +137,14 @@ void command_move_to_level(struct liars_server* server, const char* command,
 }
 
 static const struct command_def commands[] = {
-    {"spawn", spawn_command},
-    {"workspace", workspace_command},
-    {"close", close_focused},
-    {"workspacesend", send_to_workspace_command},
-    {"fullscreen", fullscreen},
-    {"float", floating},
-    {"reload", reload_config},
-    {"all-workspaces", get_workspaces},
+    {"spawn", command_spawn},
+    {"workspace", command_to_column},
+    {"close", command_close_focused},
+    {"workspacesend", command_send_to_workspace},
+    {"fullscreen", command_set_fullscreen},
+    {"float", command_set_floating},
+    {"reload", command_reload_config},
+    {"all-workspaces", command_get_workspaces},
     {"level", command_move_to_level}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd,

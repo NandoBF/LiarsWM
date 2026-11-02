@@ -329,7 +329,6 @@ int init_liar_server(struct liars_server* server,
         wl_display_destroy(server->wl_display);
         return 1;
     }
-    wlr_log(WLR_DEBUG, "YOOO");
 
     struct config* config = load_config("./config/example.toml");
     server->config = config;
@@ -339,22 +338,6 @@ int init_liar_server(struct liars_server* server,
     setenv("WAYLAND_DISPLAY", socket, true);
 
     server->ipc_server = ipc_server_create(server);
-
-    if (fork() == 0) {
-        setsid();
-        if (fork() == 0) {
-            int fd = open("/dev/null", O_RDWR);
-            if (fd >= 0) {
-                dup2(fd, STDIN_FILENO);
-                dup2(fd, STDOUT_FILENO);
-                dup2(fd, STDERR_FILENO);
-                close(fd);
-            }
-            execl("/usr/bin/kitty", "kitty", (char*)NULL);
-            _exit(1);
-        }
-        _exit(0);
-    }
 
     wlr_log(WLR_DEBUG, "Liar server initiated");
     return 0;
