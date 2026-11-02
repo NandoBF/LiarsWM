@@ -21,31 +21,21 @@
 #include <wlr/xwayland.h>
 #include <xkbcommon/xkbcommon.h>
 
-// PERF: Am I stupid? Why is this like this??
-// TODO: Fix this with the active workspace!
+// NOTE: Can directly save the focused view if needed later
 struct view* get_focused_view(struct liars_server* server) {
     struct wlr_surface* focused_surface = seat_focused_surface(server->seat);
     if (!focused_surface)
         return NULL;
 
-    struct column* col;
-    wl_list_for_each(col, &server->columns, link) {
-        struct workspace* ws;
-        for (int i = 0; i < MAX_LEVELS; i++) {
-            ws = col->levels[i];
-            if (!ws)
-                continue;
-
-            struct view* v;
-            wl_list_for_each(v, &ws->views.tiles, link) {
-                if (v->surface == focused_surface)
-                    return v;
-            }
-            wl_list_for_each(v, &ws->views.floating, link) {
-                if (v->surface == focused_surface)
-                    return v;
-            }
-        }
+    struct workspace* ws = get_active_workspace(server);
+    struct view* v;
+    wl_list_for_each(v, &ws->views.tiles, link) {
+        if (v->surface == focused_surface)
+            return v;
+    }
+    wl_list_for_each(v, &ws->views.floating, link) {
+        if (v->surface == focused_surface)
+            return v;
     }
     return NULL;
 }
