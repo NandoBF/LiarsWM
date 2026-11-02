@@ -73,6 +73,7 @@ struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
                              struct wlr_surface** surface, double* sx,
                              double* sy);
 
+void switch_to_workspace(struct liars_server* server, struct workspace* new);
 void switch_to_column(struct liars_server* server, const char* name);
 struct view* get_focused_view(struct liars_server* server);
 struct view* get_view_under_cursor(struct liars_server* server);

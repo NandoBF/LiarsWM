@@ -8,6 +8,7 @@
 
 static int is_column_name_valid(const char* name) {
     // only allow numbers and letters
+    // TODO:
     for (int i = 0; name[i]; i++) {
         if (name[i] == ' ')
             return 0;
@@ -15,10 +16,28 @@ static int is_column_name_valid(const char* name) {
     return 1;
 }
 
-struct workspace* workspace_create(struct column* col) {
+bool column_is_level_valid(int level) {
+    return (level < MAX_LEVELS && level >= 0);
+}
+
+bool is_workspace_empty(struct workspace* ws) {
+    return wl_list_empty(&ws->views.tiles) &&
+           wl_list_empty(&ws->views.floating) && !ws->views.fullscreen;
+}
+
+bool is_column_empty(struct column* col) {
+    for (int i = 0; i < MAX_LEVELS; i++) {
+        if (col->levels[i])
+            return false;
+    }
+    return true;
+}
+
+struct workspace* workspace_create_at_level(struct column* col, int level) {
+    if (!column_is_level_valid(level))
+        return NULL;
     struct workspace* ws = calloc(1, sizeof(*ws));
     ws->col = col;
-    ws->level = col->last_level++;
     ws->TREE = wlr_scene_tree_create(&col->server->scene->tree);
 
     // bottom-to-top creation order so they render correctly
@@ -29,10 +48,34 @@ struct workspace* workspace_create(struct column* col) {
     wl_list_init(&ws->views.floating);
     ws->views.fullscreen = NULL;
 
-    wl_list_insert(&col->levels, &ws->link);
+    col->levels[level] = ws;
+    ws->level = level;
     ws->layout = &tiling_layout;
     ws->needs_arrange = true;
     return ws;
+}
+
+// TODO: Collapse levels option?
+struct workspace* column_get_or_create_level(struct column* col, int level) {
+    if (!column_is_level_valid(level))
+        return NULL;
+    struct workspace* ws;
+    ws = col->levels[level];
+
+    if (!ws) {
+        ws = workspace_create_at_level(col, level);
+    }
+    return ws;
+}
+
+// This function returns NULL if the passed column is not focused
+struct workspace* column_get_offset_level(struct column* col, int offset) {
+    struct workspace* ws = get_active_workspace(col->server);
+    if (ws->col != col)
+        return NULL;
+
+    int new_level = ws->level + offset;
+    return column_get_or_create_level(col, new_level);
 }
 
 int send_to_workspace(struct workspace* new, struct view* view) {
@@ -91,12 +134,20 @@ struct column* column_get_or_create(struct liars_server* server,
     col->monitor = monitor;
     col->name = strdup(name);
     col->name_size = strlen(col->name);
-    wl_list_init(&col->levels);
-    col->last_level = 0;
     wl_list_insert(&server->columns, &col->link);
+    col->levels = calloc(MAX_LEVELS, sizeof(struct workspace*));
 
-    workspace_create(col);
+    workspace_create_at_level(col, 0);
     return col;
+}
+
+void column_try_remove(struct liars_server* server, struct column* col) {
+    if (!is_column_empty(col))
+        return;
+
+    wl_list_remove(&col->link);
+    free(col);
+    col = NULL;
 }
 
 void workspace_set_fullscreen(struct view* view) {

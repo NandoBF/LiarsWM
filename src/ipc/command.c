@@ -6,6 +6,7 @@
 #include "view/view.h"
 #include "windows/workspace.h"
 #include "wlr/util/log.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -13,6 +14,8 @@
 #include <unistd.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
+
+// TODO: Standardize command functions name
 
 void spawn_command(struct liars_server* server, const char* command,
                    int client_fd) {
@@ -58,8 +61,7 @@ void send_to_workspace_command(struct liars_server* server, const char* command,
         struct column* col = column_get_or_create(server, monitor, command);
         if (col) {
             wlr_log(WLR_INFO, "Sending to workspace: %s", command);
-            struct workspace* target_ws =
-                wl_container_of(col->levels.next, target_ws, link);
+            struct workspace* target_ws = column_get_or_create_level(col, 0);
             send_to_workspace(target_ws, view);
             focus_view_under_cursor(server);
             return;
@@ -103,25 +105,47 @@ void get_workspaces(struct liars_server* server, const char* command,
                     int client_fd) {
     struct column* col;
     wl_list_for_each(col, &server->columns, link) {
-        struct workspace* ws;
-        int i = 0;
         size_t size = col->name_size + 15;
         char str[size];
-        wl_list_for_each(ws, &col->levels, link) {
+        for (int i = 0; i < MAX_LEVELS; i++) {
+            if (!col->levels[i])
+                continue;
             int len = snprintf(str, size, "%s at level %d\n", col->name, i);
             if (len > 0 && client_fd != -1) {
                 write(client_fd, str, len);
             }
-            i++;
         }
     }
 }
 
+void command_move_to_level(struct liars_server* server, const char* command,
+                           int client_fd) {
+    wlr_log(WLR_INFO, "%s", command);
+    char* end;
+    errno = 0;
+    const int target_level = strtol(command, &end, 10);
+
+    if (errno == ERANGE || !column_is_level_valid(target_level)) {
+        wlr_log(WLR_ERROR, "Tried moving to out of range level!");
+        return;
+    }
+
+    struct workspace* ws = get_active_workspace(server);
+    struct column* col = ws->col;
+    struct workspace* new = column_get_or_create_level(col, target_level);
+    switch_to_workspace(server, new);
+}
+
 static const struct command_def commands[] = {
-    {"spawn", spawn_command},   {"workspace", workspace_command},
-    {"close", close_focused},   {"workspacesend", send_to_workspace_command},
-    {"fullscreen", fullscreen}, {"float", floating},
-    {"reload", reload_config},  {"all-workspaces", get_workspaces}};
+    {"spawn", spawn_command},
+    {"workspace", workspace_command},
+    {"close", close_focused},
+    {"workspacesend", send_to_workspace_command},
+    {"fullscreen", fullscreen},
+    {"float", floating},
+    {"reload", reload_config},
+    {"all-workspaces", get_workspaces},
+    {"level", command_move_to_level}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd,
                                  int client_fd) {

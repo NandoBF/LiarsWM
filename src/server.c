@@ -21,6 +21,8 @@
 #include <wlr/xwayland.h>
 #include <xkbcommon/xkbcommon.h>
 
+// PERF: Am I stupid? Why is this like this??
+// TODO: Fix this with the active workspace!
 struct view* get_focused_view(struct liars_server* server) {
     struct wlr_surface* focused_surface = seat_focused_surface(server->seat);
     if (!focused_surface)
@@ -29,7 +31,11 @@ struct view* get_focused_view(struct liars_server* server) {
     struct column* col;
     wl_list_for_each(col, &server->columns, link) {
         struct workspace* ws;
-        wl_list_for_each(ws, &col->levels, link) {
+        for (int i = 0; i < MAX_LEVELS; i++) {
+            ws = col->levels[i];
+            if (!ws)
+                continue;
+
             struct view* v;
             wl_list_for_each(v, &ws->views.tiles, link) {
                 if (v->surface == focused_surface)
@@ -52,27 +58,33 @@ struct workspace* get_active_workspace(struct liars_server* server) {
     return server->active_workspace;
 }
 
+void switch_to_workspace(struct liars_server* server, struct workspace* new) {
+    struct workspace* old = server->active_workspace;
+    if (old == new)
+        return;
+
+    if (old) {
+        wlr_scene_node_set_enabled(&old->TREE->node, false);
+        column_try_remove(server, old->col);
+    }
+
+    wlr_scene_node_set_enabled(&new->TREE->node, true);
+    server->active_workspace = new;
+    focus_view_under_cursor(server);
+    wlr_log(WLR_INFO, "Switched to column %s level %d", new->col->name,
+            new->level);
+}
+
+// TODO: Last focused level in col? This is why I even left this function
 void switch_to_column(struct liars_server* server, const char* name) {
     struct monitor* monitor;
     struct column* col;
     wl_list_for_each(monitor, &server->monitors, link) {
         col = column_get_or_create(server, monitor, name);
         if (col) {
-            struct workspace* old = server->active_workspace;
-            struct workspace* new = wl_container_of(
-                col->levels.next, (struct workspace*)NULL, link);
+            struct workspace* new = column_get_or_create_level(col, 0);
 
-            if (old == new)
-                return;
-
-            if (old)
-                wlr_scene_node_set_enabled(&old->TREE->node,
-                                           false); // TODO: WRAP
-            wlr_scene_node_set_enabled(&new->TREE->node, true);
-
-            server->active_workspace = new;
-            focus_view_under_cursor(server);
-            wlr_log(WLR_INFO, "Switched to workspace %s", name);
+            switch_to_workspace(server, new);
             return;
         }
     }
@@ -153,9 +165,12 @@ static void server_new_output(struct wl_listener* listener, void* data) {
 
     if (wl_list_length(&server->monitors) == 1) {
         struct column* col = column_get_or_create(server, monitor, "1");
+        if (!col) {
+            wlr_log(WLR_ERROR, "[FATAL] Could not create initial column!");
+            exit(1); // TODO: DIE
+        }
 
-        server->active_workspace =
-            wl_container_of(col->levels.next, (struct workspace*)NULL, link);
+        server->active_workspace = column_get_or_create_level(col, 0);
         wlr_scene_node_set_enabled(&server->active_workspace->TREE->node, true);
     }
 }

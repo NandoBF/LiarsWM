@@ -6,6 +6,8 @@
 #include <wayland-util.h>
 #include <wlr/backend.h>
 
+#define MAX_LEVELS 10
+
 struct workspace_views {
     struct wlr_scene_tree* layer_tiled;
     struct wl_list tiles;
@@ -24,8 +26,7 @@ struct column {
     struct monitor* monitor;
     char* name;
     size_t name_size;
-    struct wl_list levels;
-    int last_level;
+    struct workspace** levels; // array of workspace pointers
 };
 
 struct workspace {
@@ -43,8 +44,15 @@ struct workspace {
 
 struct column* column_get_or_create(struct liars_server* server,
                                     struct monitor* monitor, const char* name);
+struct workspace* column_get_or_create_level(struct column* col, int level);
+struct workspace* column_get_offset_level(struct column* col, int offset);
+
+bool column_is_level_valid(int level);
 
 int send_to_workspace(struct workspace* new, struct view* view);
 void workspace_spawn(struct workspace* ws, struct view* view);
 void workspace_set_fullscreen(struct view* view);
 void workspace_unset_fullscreen(struct workspace* ws, struct view* view);
+bool is_workspace_empty(struct workspace* ws);
+bool is_column_empty(struct column* col);
+void column_try_remove(struct liars_server* server, struct column* col);
