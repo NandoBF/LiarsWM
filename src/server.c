@@ -61,7 +61,7 @@ void switch_to_workspace(struct liars_server* server, struct workspace* new) {
     wlr_scene_node_set_enabled(&new->TREE->node, true);
     server->active_workspace = new;
     focus_view_under_cursor(server);
-    wlr_log(WLR_INFO, "Switched to column %s level %d", new->col->name,
+    wlr_log(WLR_DEBUG, "Switched to column %s level %d", new->col->name,
             new->level);
 }
 

@@ -120,7 +120,6 @@ void command_get_workspaces(struct liars_server* server, const char* command,
 
 void command_move_to_level(struct liars_server* server, const char* command,
                            int client_fd) {
-    wlr_log(WLR_INFO, "%s", command);
     char* end;
     errno = 0;
     const int target_level = strtol(command, &end, 10);
@@ -136,6 +135,36 @@ void command_move_to_level(struct liars_server* server, const char* command,
     switch_to_workspace(server, new);
 }
 
+void command_move_to_level_offset(struct liars_server* server,
+                                  const char* command, int client_fd) {
+    char* end;
+    errno = 0;
+    const int offset = strtol(command, &end, 10);
+    if (errno == ERANGE) {
+        wlr_log(WLR_ERROR, "Invalid level offset!");
+        return;
+    }
+
+    struct workspace* ws = get_active_workspace(server);
+    struct workspace* new = column_get_offset_level(ws->col, offset);
+    if (!new) {
+        wlr_log(WLR_ERROR, "Invalid target level!");
+        return;
+    }
+    switch_to_workspace(server, new);
+}
+
+void command_workspace_reparent(struct liars_server* server,
+                                const char* command, int client_fd) {
+    struct monitor* monitor;
+    wl_list_for_each(monitor, &server->monitors, link) {
+        struct column* col = column_get_or_create(server, monitor, command);
+        if (col) {
+            workspace_send_to_column(get_active_workspace(server), col);
+        }
+    }
+}
+
 static const struct command_def commands[] = {
     {"spawn", command_spawn},
     {"workspace", command_to_column},
@@ -145,7 +174,9 @@ static const struct command_def commands[] = {
     {"float", command_set_floating},
     {"reload", command_reload_config},
     {"all-workspaces", command_get_workspaces},
-    {"level", command_move_to_level}};
+    {"level", command_move_to_level},
+    {"level-offset", command_move_to_level_offset},
+    {"workspace-reparent", command_workspace_reparent}};
 
 const char* handle_command_input(struct liars_server* server, const char* cmd,
                                  int client_fd) {

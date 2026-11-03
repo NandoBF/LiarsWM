@@ -43,6 +43,26 @@ keys = "Ctrl+r"
 action = "reload"
 
 [[keybind]]
+keys = "Ctrl+Up"
+action = "level-offset"
+args = "1"
+
+[[keybind]]
+keys = "Ctrl+Down"
+action = "level-offset"
+args = "-1"
+
+[[keybind]]
+keys = "Ctrl+Home"
+action = "level"
+args = "0"
+
+[[keybind]]
+keys = "Ctrl+End"
+action = "level"
+args = "9"
+
+[[keybind]]
 keys = "Ctrl+Space"
 action = "spawn"
 args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspace {}"

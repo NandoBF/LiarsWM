@@ -46,6 +46,7 @@ struct column* column_get_or_create(struct liars_server* server,
                                     struct monitor* monitor, const char* name);
 struct workspace* column_get_or_create_level(struct column* col, int level);
 struct workspace* column_get_offset_level(struct column* col, int offset);
+void workspace_send_to_column(struct workspace* ws, struct column* target_col);
 
 bool column_is_level_valid(int level);
 

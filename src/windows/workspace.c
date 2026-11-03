@@ -2,6 +2,7 @@
 #include "server.h"
 #include "view/view.h"
 #include "windows/layout.h"
+#include "wlr/util/log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-util.h>
@@ -31,6 +32,33 @@ bool is_column_empty(struct column* col) {
             return false;
     }
     return true;
+}
+
+// The target column needs to have a free level for the workspace
+// TODO: Option to not follow the workspace (just focus the old column and
+// level)
+void workspace_send_to_column(struct workspace* ws, struct column* target_col) {
+    struct column* old = ws->col;
+    int target_level = -1;
+
+    if (!target_col->levels[ws->level])
+        target_level = ws->level;
+    else {
+        for (int i = 0; target_level == -1 && i < MAX_LEVELS; i++) {
+            if (!target_col->levels[i])
+                target_level = i;
+        }
+    }
+
+    if (target_level == -1)
+        return; // no free level at target
+
+    old->levels[ws->level] = NULL;
+    target_col->levels[target_level] = ws;
+    ws->col = target_col;
+    ws->level = target_level;
+    wlr_log(WLR_DEBUG, "Workspace moved from %s to %s:%d", old->name,
+            target_col->name, ws->level);
 }
 
 struct workspace* workspace_create_at_level(struct column* col, int level) {
