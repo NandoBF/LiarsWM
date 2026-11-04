@@ -38,6 +38,7 @@ struct view {
     struct wl_listener initial_commit;
 
     struct wlr_scene_rect* borders[4];
+    struct wlr_box box;
     bool is_fullscreen;
     bool is_floating;
 };

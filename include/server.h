@@ -29,6 +29,9 @@ struct monitor {
     struct wl_listener frame;
     struct wl_listener request_state;
     struct wl_listener destroy;
+
+    struct wlr_box box;
+    struct wlr_box usable;
 };
 
 struct liars_server {

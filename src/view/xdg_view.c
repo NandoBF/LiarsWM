@@ -22,9 +22,12 @@ struct xdg_view {
 };
 
 struct xdg_popup {
+    struct xdg_view* parent_view;
+
     struct wlr_xdg_popup* xdg_popup;
     struct wl_listener commit;
     struct wl_listener destroy;
+    struct wl_listener reposition;
 };
 
 static void xdg_view_set_size(struct view* v, int w, int h) {
@@ -207,7 +210,6 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
 
     xv->surface_tree =
         wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
-    toplevel->base->data = xv->surface_tree;
     wlr_scene_node_set_position(&xv->surface_tree->node, config->border_width,
                                 config->border_width);
 
@@ -236,16 +238,51 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     xv->base.request_fullscreen.notify = xdg_toplevel_request_fullscreen;
     wl_signal_add(&toplevel->events.request_fullscreen,
                   &xv->base.request_fullscreen);
+
+    toplevel->base->data = xv;
+}
+
+static void xdg_popup_unconstrain(struct xdg_popup* popup) {
+    struct wlr_xdg_popup* xdg_popup = popup->xdg_popup;
+
+    struct wlr_box constraint_box;
+    struct wlr_layer_surface_v1* layer_surface =
+        wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->base->surface);
+
+    struct monitor* monitor = popup->parent_view->base.workspace->col->monitor;
+    struct wlr_scene_tree* tree = popup->parent_view->surface_tree;
+    int toplevel_global_x = 0, toplevel_global_y = 0;
+    wlr_scene_node_coords(&tree->node, &toplevel_global_x, &toplevel_global_y);
+
+    if (layer_surface) {
+        // LAYER SHELL
+        // TODO: Make sure this is correct
+        constraint_box.x = monitor->box.x;
+        constraint_box.y = monitor->box.y;
+        constraint_box.width = monitor->output->width;
+        constraint_box.height = monitor->output->height;
+    } else {
+
+        constraint_box.x = monitor->box.x - toplevel_global_x;
+        constraint_box.y = monitor->box.y - toplevel_global_y;
+        constraint_box.width = monitor->output->width;
+        constraint_box.height = monitor->output->height;
+    }
+    wlr_xdg_popup_unconstrain_from_box(xdg_popup, &constraint_box);
 }
 
 static void xdg_popup_commit(struct wl_listener* listener, void* data) {
     struct xdg_popup* popup = wl_container_of(listener, popup, commit);
+    if (!popup->xdg_popup->base->initial_commit)
+        return;
 
-    if (popup->xdg_popup->base->initial_commit) {
-        // TODO: NEEDS to change the popups geometry. Sometimes renders
-        // offscreen
-        wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
-    }
+    xdg_popup_unconstrain(popup);
+    wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+}
+
+static void xdg_popup_reposition(struct wl_listener* listener, void* data) {
+    struct xdg_popup* popup = wl_container_of(listener, popup, reposition);
+    xdg_popup_unconstrain(popup);
 }
 
 static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
@@ -253,13 +290,13 @@ static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
 
     wl_list_remove(&popup->commit.link);
     wl_list_remove(&popup->destroy.link);
+    wl_list_remove(&popup->reposition.link);
 
     free(popup);
 }
 
 void server_new_xdg_popup(struct wl_listener* listener, void* data) {
     struct wlr_xdg_popup* wlr_xdg_popup = data;
-
     struct xdg_popup* popup = calloc(1, sizeof(*popup));
     popup->xdg_popup = wlr_xdg_popup;
 
@@ -271,20 +308,17 @@ void server_new_xdg_popup(struct wl_listener* listener, void* data) {
         free(popup);
         return;
     }
+    popup->parent_view = parent->data;
 
-    struct wlr_scene_tree* parent_tree = parent->data;
-    if (!parent_tree) {
-        wlr_log(WLR_ERROR, "Xdg popup parent has no scene tree!");
-        free(popup);
-        return;
-    }
-
-    wlr_xdg_popup->base->data =
-        wlr_scene_xdg_surface_create(parent_tree, wlr_xdg_popup->base);
+    wlr_xdg_popup->base->data = wlr_scene_xdg_surface_create(
+        popup->parent_view->surface_tree, wlr_xdg_popup->base);
 
     popup->commit.notify = xdg_popup_commit;
     wl_signal_add(&wlr_xdg_popup->base->surface->events.commit, &popup->commit);
 
     popup->destroy.notify = xdg_popup_destroy;
     wl_signal_add(&wlr_xdg_popup->events.destroy, &popup->destroy);
+
+    popup->reposition.notify = xdg_popup_reposition;
+    wl_signal_add(&wlr_xdg_popup->events.reposition, &popup->reposition);
 }

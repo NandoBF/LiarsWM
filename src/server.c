@@ -117,6 +117,9 @@ static void server_new_output(struct wl_listener* listener, void* data) {
     }
     monitor->output = data;
     monitor->server = server;
+    wlr_output_layout_get_box(server->output_layout, monitor->output,
+                              &monitor->box);
+    monitor->usable = monitor->box;
 
     wlr_output_init_render(monitor->output, server->allocator,
                            server->renderer);
