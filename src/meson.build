@@ -28,6 +28,6 @@ sources = [
   sources_view,
   sources_windows,
   'src/config.c',
-  'src/layer_view.c',
+  'src/layer_shell.c',
   'src/server.c'
 ]

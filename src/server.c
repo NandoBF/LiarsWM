@@ -6,6 +6,7 @@
 #include "view/x11_view.h"
 #include "view/xdg_view.h"
 #include "windows/decoration.h"
+#include "windows/layout.h"
 #include "windows/workspace.h"
 #include "wlr/types/wlr_xdg_decoration_v1.h"
 #include <bits/time.h>
@@ -117,9 +118,7 @@ static void server_new_output(struct wl_listener* listener, void* data) {
     }
     monitor->output = data;
     monitor->server = server;
-    wlr_output_layout_get_box(server->output_layout, monitor->output,
-                              &monitor->box);
-    monitor->usable = monitor->box;
+    wl_list_init(&monitor->layer_surfaces);
 
     wlr_output_init_render(monitor->output, server->allocator,
                            server->renderer);
@@ -156,6 +155,14 @@ static void server_new_output(struct wl_listener* listener, void* data) {
                                        scene_output);
     monitor->scene_output = scene_output;
 
+    wlr_output_layout_get_box(server->output_layout, monitor->output,
+                              &monitor->box);
+    wlr_log(WLR_INFO, "Monitor %s at (%d, %d) with %dx%d",
+            monitor->output->name, monitor->box.x, monitor->box.y,
+            monitor->box.width, monitor->box.height);
+    monitor->usable = monitor->box;
+
+    // FIX: This will focus column 1 if a second monitor is disconnected
     if (wl_list_length(&server->monitors) == 1) {
         struct column* col = column_get_or_create(server, monitor, "1");
         if (!col) {
@@ -313,6 +320,9 @@ int init_liar_server(struct liars_server* server,
     wl_signal_add(&server->decoration_manager->events.new_toplevel_decoration,
                   &server->new_view_decoration);
 
+    server->xdg_output_manager = wlr_xdg_output_manager_v1_create(
+        server->wl_display, server->output_layout);
+
     // Seat
     struct liars_seat* seat = create_seat(server);
     server->seat = seat;
@@ -344,4 +354,27 @@ int init_liar_server(struct liars_server* server,
 
     wlr_log(WLR_DEBUG, "Liar server initiated");
     return 0;
+}
+
+void monitor_arrange_layers(struct monitor* monitor) {
+    struct wlr_box old_usable = monitor->usable;
+    monitor->usable = monitor->box;
+
+    struct layer_surface* ls;
+    wl_list_for_each(ls, &monitor->layer_surfaces, link) {
+        if (!ls->wlr_layer_surface->initialized)
+            continue;
+        wlr_scene_layer_surface_v1_configure(ls->scene, &monitor->box,
+                                             &monitor->usable);
+    }
+
+    if (old_usable.x != monitor->usable.x ||
+        old_usable.y != monitor->usable.y ||
+        old_usable.width != monitor->usable.width ||
+        old_usable.height != monitor->usable.height) {
+
+        wlr_log(WLR_INFO, "Arranging!");
+        struct workspace* ws = get_active_workspace(monitor->server);
+        workspace_arrange(ws);
+    }
 }

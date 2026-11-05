@@ -12,13 +12,16 @@ void workspace_arrange(struct workspace* ws) {
 
     struct monitor* monitor = ws->col->monitor;
     struct config* config = ws->col->server->config;
-    int width = monitor->output->width;
-    int height = monitor->output->height;
+    int x = monitor->usable.x;
+    int y = monitor->usable.y;
+    int width = monitor->usable.width;
+    int height = monitor->usable.height;
 
     int edge_offset = config->outer_gap - (config->inner_gap / 2);
 
-    ws->layout->arrange(ws, edge_offset, edge_offset, width - (2 * edge_offset),
-                        height - (2 * edge_offset), config->inner_gap);
+    ws->layout->arrange(ws, x + edge_offset, y + edge_offset,
+                        width - (2 * edge_offset), height - (2 * edge_offset),
+                        config->inner_gap);
     ws->needs_arrange = false;
 }
 

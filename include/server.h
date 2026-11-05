@@ -18,6 +18,7 @@
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
@@ -32,6 +33,7 @@ struct monitor {
 
     struct wlr_box box;
     struct wlr_box usable;
+    struct wl_list layer_surfaces;
 };
 
 struct liars_server {
@@ -70,6 +72,8 @@ struct liars_server {
 
     struct wlr_xdg_decoration_manager_v1* decoration_manager;
     struct wl_listener new_view_decoration;
+
+    struct wlr_xdg_output_manager_v1* xdg_output_manager;
 };
 
 struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
@@ -86,3 +90,5 @@ void server_run(struct liars_server* server);
 int init_liar_server(struct liars_server* server,
                      enum wlr_log_importance log_level);
 struct workspace* get_active_workspace(struct liars_server* server);
+
+void monitor_arrange_layers(struct monitor* monitor);
