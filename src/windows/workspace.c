@@ -34,6 +34,12 @@ bool is_column_empty(struct column* col) {
     return true;
 }
 
+void workspace_try_remove(struct workspace* ws) {
+    if (is_workspace_empty(ws)) {
+        ws->col->levels[ws->level] = NULL;
+        free(ws);
+    }
+}
 // The target column needs to have a free level for the workspace
 // TODO: Option to not follow the workspace (just focus the old column and
 // level)

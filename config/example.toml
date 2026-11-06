@@ -7,21 +7,21 @@ outer_gaps = 5
 border_width = 5
 
 [[keybind]]
-keys = "Ctrl+Return"
+keys = "Super+Return"
 action = "spawn"
 args = "kitty"
 
 [[keybind]]
-keys = "Ctrl+Shift+C"
+keys = "Super+Shift+C"
 action = "close"
 
 [[keybind]]
-keys = "Ctrl+Shift+Space"
+keys = "Super+Shift+Space"
 action = "spawn"
 args = "rofi -show drun"
 
 [[keybind]]
-keys = "Ctrl+f"
+keys = "Super+f"
 action = "fullscreen"
 
 [[keybind]]
@@ -30,44 +30,44 @@ action = "workspace"
 args = "%d"
 
 [[keybind]]
-keys = "Ctrl+Alt+2"
+keys = "Super+Alt+2"
 action = "workspacesend"
 args = "2"
 
 [[keybind]]
-keys = "Ctrl+z"
+keys = "Super+z"
 action = "float"
 
 [[keybind]]
-keys = "Ctrl+r"
+keys = "Super+r"
 action = "reload"
 
 [[keybind]]
-keys = "Ctrl+Up"
+keys = "Super+Up"
 action = "level-offset"
 args = "1"
 
 [[keybind]]
-keys = "Ctrl+Down"
+keys = "Super+Down"
 action = "level-offset"
 args = "-1"
 
 [[keybind]]
-keys = "Ctrl+Home"
+keys = "Super+Home"
 action = "level"
 args = "0"
 
 [[keybind]]
-keys = "Ctrl+End"
+keys = "Super+End"
 action = "level"
 args = "9"
 
 [[keybind]]
-keys = "Ctrl+Space"
+keys = "Super+Space"
 action = "spawn"
 args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspace {}"
 
 [[keybind]]
-keys = "Ctrl+Alt+Space"
+keys = "Super+Alt+Space"
 action = "spawn"
 args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspacesend {}"

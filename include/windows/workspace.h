@@ -48,6 +48,8 @@ struct workspace* column_get_or_create_level(struct column* col, int level);
 struct workspace* column_get_offset_level(struct column* col, int offset);
 void workspace_send_to_column(struct workspace* ws, struct column* target_col);
 
+void workspace_try_remove(struct workspace* ws);
+
 bool column_is_level_valid(int level);
 
 int send_to_workspace(struct workspace* new, struct view* view);

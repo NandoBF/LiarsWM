@@ -55,6 +55,7 @@ void switch_to_workspace(struct liars_server* server, struct workspace* new) {
         return;
 
     if (old) {
+        workspace_try_remove(old);
         wlr_scene_node_set_enabled(&old->TREE->node, false);
         column_try_remove(server, old->col);
     }
@@ -343,7 +344,7 @@ int init_liar_server(struct liars_server* server,
         return 1;
     }
 
-    struct config* config = load_config("./config/example.toml");
+    struct config* config = load_config("./config/nested.toml");
     server->config = config;
 
     wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");
