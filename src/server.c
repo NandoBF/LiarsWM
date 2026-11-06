@@ -59,7 +59,9 @@ void switch_to_workspace(struct liars_server* server, struct workspace* new) {
         wlr_scene_node_set_enabled(&old->TREE->node, false);
         column_try_remove(server, old->col);
     }
-
+    if (new->needs_arrange) {
+        workspace_arrange(new);
+    }
     wlr_scene_node_set_enabled(&new->TREE->node, true);
     server->active_workspace = new;
     focus_view_under_cursor(server);
@@ -374,8 +376,17 @@ void monitor_arrange_layers(struct monitor* monitor) {
         old_usable.width != monitor->usable.width ||
         old_usable.height != monitor->usable.height) {
 
-        wlr_log(WLR_INFO, "Arranging!");
+        wlr_log(WLR_DEBUG, "Arranging!");
         struct workspace* ws = get_active_workspace(monitor->server);
         workspace_arrange(ws);
+
+        // PERF: try a better way?
+        struct column* col;
+        wl_list_for_each(col, &monitor->server->columns, link) {
+            for (int i = 0; i < MAX_LEVELS; i++) {
+                if (col->levels[i] && col->levels[i] != ws)
+                    col->levels[i]->needs_arrange = true;
+            }
+        }
     }
 }

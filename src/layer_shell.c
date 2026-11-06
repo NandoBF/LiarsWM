@@ -65,7 +65,9 @@ static void layer_surface_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&ls->destroy.link);
     wl_list_remove(&ls->link);
 
+    monitor_arrange_layers(ls->monitor);
     free(ls);
+    ls = NULL;
 }
 
 void server_new_layer_shell_surface(struct wl_listener* listener, void* data) {
