@@ -146,8 +146,8 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&x11_v->grab_focus.link);
     wl_list_remove(&view->destroy.link);
 
-    wlr_scene_node_destroy(&view->scene_tree->node);
     view_destroy(view);
+    wlr_scene_node_destroy(&view->scene_tree->node);
     free(view);
 }
 
