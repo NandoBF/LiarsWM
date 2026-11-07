@@ -380,7 +380,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
     struct wlr_keyboard* kb = wlr_seat_get_keyboard(cursor->seat->seat);
     uint32_t modifiers = kb ? wlr_keyboard_get_modifiers(kb) : 0;
     bool is_interactive_modifier =
-        (modifiers & WLR_MODIFIER_CTRL); // TODO: Make this configurable
+        (modifiers & server->config->interactive_modifier);
 
     // FIX: Dont like this. Also it seems to have a massive delay on release
     if (event->state == WL_POINTER_BUTTON_STATE_PRESSED &&

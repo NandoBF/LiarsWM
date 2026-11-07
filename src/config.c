@@ -11,6 +11,7 @@
 #define INNER_GAPS "general.appearance.inner_gaps"
 #define OUTER_GAPS "general.appearance.outer_gaps"
 #define BORDER_WIDTH "general.appearance.border_width"
+#define INTERACTIVE_MOD "general.binds.interactive_modifier"
 
 static int read_int(toml_result_t result, const char* name) {
     toml_datum_t read = toml_seek(result.toptab, name);
@@ -21,6 +22,17 @@ static int read_int(toml_result_t result, const char* name) {
 
     wlr_log(WLR_INFO, "Could not read int: %s. Falling back.", name);
     return 1;
+}
+
+static const char* read_str(toml_result_t result, const char* name) {
+    toml_datum_t read = toml_seek(result.toptab, name);
+
+    if (read.type == TOML_STRING) {
+        return read.u.s;
+    }
+
+    wlr_log(WLR_INFO, "Could not read string: %s. Falling back.", name);
+    return "";
 }
 
 void toggle_command_mode(struct liars_server* server,
@@ -91,6 +103,12 @@ struct config* load_config(const char* config_path) {
     c->inner_gap = read_int(result, INNER_GAPS);
     c->outer_gap = read_int(result, OUTER_GAPS);
     c->border_width = read_int(result, BORDER_WIDTH);
+    c->interactive_modifier = parse_modifier(read_str(result, INTERACTIVE_MOD));
+    if (c->interactive_modifier == -1) {
+        c->interactive_modifier = WLR_MODIFIER_CTRL;
+        wlr_log(WLR_ERROR,
+                "Invalid interactive modifier, falling back to CTRL");
+    }
 
     load_keybinds(c, result.toptab);
 

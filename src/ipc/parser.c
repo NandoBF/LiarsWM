@@ -43,3 +43,10 @@ void parse_key_combination(const char* s, uint32_t* out_modifiers,
         curr = strtok(NULL, "+");
     }
 }
+
+int parse_modifier(const char* s) {
+    int idx = get_key_token_idx(s);
+    if (idx == -1)
+        return -1;
+    return keys[idx].key;
+}

@@ -21,6 +21,8 @@ struct config {
     struct liars_keybind** keybinds;
     int keybind_num;
 
+    int interactive_modifier;
+
     time_t last_modified_at;
 };
 

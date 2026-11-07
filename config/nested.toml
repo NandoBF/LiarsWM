@@ -6,6 +6,9 @@ inner_gaps = 3
 outer_gaps = 5
 border_width = 5
 
+[general.binds]
+interactive_modifier = "Shift"
+
 [[keybind]]
 keys = "Ctrl+Return"
 action = "spawn"
