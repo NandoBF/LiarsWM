@@ -22,20 +22,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
-struct monitor {
-    struct wl_list link;
-    struct liars_server* server;
-    struct wlr_output* output;
-    struct wlr_scene_output* scene_output;
-    struct wl_listener frame;
-    struct wl_listener request_state;
-    struct wl_listener destroy;
-
-    struct wlr_box box;
-    struct wlr_box usable;
-    struct wl_list layer_surfaces;
-};
-
 struct liars_server {
     struct config* config;
 
@@ -90,5 +76,3 @@ void server_run(struct liars_server* server);
 int init_liar_server(struct liars_server* server,
                      enum wlr_log_importance log_level);
 struct workspace* get_active_workspace(struct liars_server* server);
-
-void monitor_arrange_layers(struct monitor* monitor);

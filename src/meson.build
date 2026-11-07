@@ -29,5 +29,6 @@ sources = [
   sources_windows,
   'src/config.c',
   'src/layer_shell.c',
+  'src/monitor.c',
   'src/server.c'
 ]

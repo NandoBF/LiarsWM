@@ -1,7 +1,7 @@
 #include "view/xdg_view.h"
 #include "config.h"
 #include "input/input.h"
-#include "server.h"
+#include "monitor.h"
 #include "view/view.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"

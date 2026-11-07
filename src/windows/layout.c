@@ -1,5 +1,6 @@
 #include "windows/layout.h"
 #include "config.h"
+#include "monitor.h"
 #include "server.h"
 #include "view/view.h"
 #include "windows/workspace.h"

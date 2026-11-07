@@ -1,5 +1,6 @@
 #include "layer_shell.h"
 #include "input/input.h"
+#include "monitor.h"
 #include "server.h"
 #include "windows/workspace.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"

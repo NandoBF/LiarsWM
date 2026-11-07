@@ -2,7 +2,7 @@
 #include "config.h"
 #include "input/input.h"
 #include "input/pointer_contraint.h"
-#include "server.h"
+#include "monitor.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"
 #include "wlr/util/log.h"
