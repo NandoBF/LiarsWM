@@ -19,4 +19,6 @@ struct monitor {
     struct wl_list layer_surfaces;
 };
 
+struct monitor* monitor_create(struct liars_server* server,
+                               struct wlr_output* output);
 void monitor_arrange_layers(struct monitor* monitor);
