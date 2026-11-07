@@ -15,6 +15,7 @@
 #include <wayland-util.h>
 #include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -115,6 +116,119 @@ static void seat_new_input(struct wl_listener* listener, void* data) {
     wlr_seat_set_capabilities(seat->seat, caps);
 }
 
+static void seat_request_set_primary_selection(struct wl_listener* listener,
+                                               void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, request_set_primary_selection);
+    struct wlr_seat_request_set_primary_selection_event* event = data;
+
+    wlr_seat_set_primary_selection(seat->seat, event->source, event->serial);
+}
+
+static void seat_pointer_grab_begin(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, pointer_grab_begin);
+    if (wlr_seat_pointer_has_grab(seat->seat))
+        return;
+    struct wlr_seat_pointer_grab* pg = data;
+    wlr_seat_pointer_start_grab(seat->seat, pg);
+}
+
+static void seat_pointer_grab_end(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat = wl_container_of(listener, seat, pointer_grab_end);
+
+    if (!wlr_seat_pointer_has_grab(seat->seat))
+        return;
+    wlr_seat_pointer_end_grab(seat->seat);
+}
+
+static void seat_keyboard_grab_begin(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, keyboard_grab_begin);
+
+    if (wlr_seat_keyboard_has_grab(seat->seat))
+        return;
+    struct wlr_seat_keyboard_grab* kg = data;
+    wlr_seat_keyboard_start_grab(seat->seat, kg);
+}
+
+static void seat_keyboard_grab_end(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, keyboard_grab_end);
+
+    if (!wlr_seat_keyboard_has_grab(seat->seat))
+        return;
+    wlr_seat_keyboard_end_grab(seat->seat);
+}
+
+static void seat_touch_grab_begin(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat = wl_container_of(listener, seat, touch_grab_begin);
+
+    if (wlr_seat_touch_has_grab(seat->seat))
+        return;
+    struct wlr_seat_touch_grab* kg = data;
+    wlr_seat_touch_start_grab(seat->seat, kg);
+}
+
+static void seat_touch_grab_end(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat = wl_container_of(listener, seat, touch_grab_end);
+
+    if (!wlr_seat_touch_has_grab(seat->seat))
+        return;
+    wlr_seat_touch_end_grab(seat->seat);
+}
+
+// TODO: Create drag icon
+static void seat_request_start_drag(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat =
+        wl_container_of(listener, seat, request_start_drag);
+    struct wlr_seat_request_start_drag_event* event = data;
+    if (wlr_seat_validate_pointer_grab_serial(seat->seat, event->origin,
+                                              event->serial)) {
+
+        wlr_seat_start_pointer_drag(seat->seat, event->drag, event->serial);
+        return;
+    }
+
+    struct wlr_touch_point* point;
+    if (wlr_seat_validate_touch_grab_serial(seat->seat, event->origin,
+                                            event->serial, &point)) {
+        wlr_seat_start_touch_drag(seat->seat, event->drag, event->serial,
+                                  point);
+        return;
+    }
+
+    if (event->drag->source != NULL) {
+        wlr_data_source_destroy(event->drag->source);
+    }
+}
+
+void seat_destroy(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat = wl_container_of(listener, seat, destroy);
+    struct liars_server* server = seat->server;
+
+    wl_list_remove(&seat->request_cursor.link);
+    wl_list_remove(&seat->pointer_focus_change.link);
+    wl_list_remove(&seat->request_set_selection.link);
+    wl_list_remove(&seat->request_start_drag.link);
+    wl_list_remove(&seat->new_input.link);
+
+    wl_list_remove(&seat->pointer_grab_begin.link);
+    wl_list_remove(&seat->pointer_grab_end.link);
+
+    wl_list_remove(&seat->keyboard_grab_begin.link);
+    wl_list_remove(&seat->keyboard_grab_end.link);
+
+    wl_list_remove(&seat->touch_grab_begin.link);
+    wl_list_remove(&seat->touch_grab_end.link);
+
+    destroy_active_pointer_constraint(seat->pointer_constraints);
+    free(seat->pointer_constraints);
+    free(seat);
+
+    server->seat = NULL;
+}
+
 struct liars_seat* create_seat(struct liars_server* server) {
     struct liars_seat* seat = calloc(1, sizeof(*seat));
     seat->server = server;
@@ -135,6 +249,41 @@ struct liars_seat* create_seat(struct liars_server* server) {
 
     seat->new_input.notify = seat_new_input;
     wl_signal_add(&server->backend->events.new_input, &seat->new_input);
+
+    seat->destroy.notify = seat_destroy;
+    wl_signal_add(&seat->seat->events.destroy, &seat->destroy);
+
+    seat->request_set_primary_selection.notify =
+        seat_request_set_primary_selection;
+    wl_signal_add(&seat->seat->events.request_set_primary_selection,
+                  &seat->request_set_primary_selection);
+
+    seat->pointer_grab_begin.notify = seat_pointer_grab_begin;
+    wl_signal_add(&seat->seat->events.pointer_grab_begin,
+                  &seat->pointer_grab_begin);
+
+    seat->pointer_grab_end.notify = seat_pointer_grab_end;
+    wl_signal_add(&seat->seat->events.pointer_grab_end,
+                  &seat->pointer_grab_end);
+
+    seat->keyboard_grab_begin.notify = seat_keyboard_grab_begin;
+    wl_signal_add(&seat->seat->events.keyboard_grab_begin,
+                  &seat->keyboard_grab_begin);
+
+    seat->keyboard_grab_end.notify = seat_keyboard_grab_end;
+    wl_signal_add(&seat->seat->events.keyboard_grab_end,
+                  &seat->keyboard_grab_end);
+
+    seat->touch_grab_begin.notify = seat_touch_grab_begin;
+    wl_signal_add(&seat->seat->events.touch_grab_begin,
+                  &seat->touch_grab_begin);
+
+    seat->touch_grab_end.notify = seat_touch_grab_end;
+    wl_signal_add(&seat->seat->events.touch_grab_end, &seat->touch_grab_end);
+
+    seat->request_start_drag.notify = seat_request_start_drag;
+    wl_signal_add(&seat->seat->events.request_start_drag,
+                  &seat->request_start_drag);
 
     seat->pointer_constraints = create_pointer_constraints(seat);
 

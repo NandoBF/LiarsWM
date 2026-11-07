@@ -295,6 +295,7 @@ static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
     free(popup);
 }
 
+// TODO:Nested popups
 void server_new_xdg_popup(struct wl_listener* listener, void* data) {
     struct wlr_xdg_popup* wlr_xdg_popup = data;
     struct xdg_popup* popup = calloc(1, sizeof(*popup));

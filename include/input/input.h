@@ -33,12 +33,22 @@ struct liars_seat {
 
     struct wl_list keyboards;
     struct wl_listener new_input;
+    struct wl_listener destroy;
 
     struct wl_listener request_cursor;
     struct wl_listener request_set_selection;
     struct wl_listener request_set_primary_selection;
     struct wl_listener request_start_drag;
-    struct wl_listener start_drag;
+
+    struct wl_listener pointer_grab_begin;
+    struct wl_listener pointer_grab_end;
+
+    struct wl_listener keyboard_grab_begin;
+    struct wl_listener keyboard_grab_end;
+
+    struct wl_listener touch_grab_begin;
+    struct wl_listener touch_grab_end;
+
     struct wl_listener pointer_focus_change;
 };
 

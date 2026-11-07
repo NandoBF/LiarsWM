@@ -137,11 +137,11 @@ void view_map(struct view* view) {
 // This does not free the view. It must be freed after
 // Common destroy behavior for all views
 // All behavior in this function must be safe to run by all view types
-void view_destroy(struct view* view) { 
+void view_destroy(struct view* view) {
     if (view->is_fullscreen) {
         workspace_unset_fullscreen(view->workspace, view);
     }
-    focus_view_under_cursor(view->server); 
+    focus_view_under_cursor(view->server);
 }
 
 void view_set_floating(struct view* view, bool floating) {
