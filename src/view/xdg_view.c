@@ -2,10 +2,12 @@
 #include "config.h"
 #include "input/input.h"
 #include "monitor.h"
+#include "server.h"
 #include "view/view.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"
 #include "wlr/util/log.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
@@ -23,11 +25,13 @@ struct xdg_view {
 
 struct xdg_popup {
     struct xdg_view* parent_view;
+    struct wlr_scene_tree* scene_tree;
 
     struct wlr_xdg_popup* xdg_popup;
     struct wl_listener commit;
     struct wl_listener destroy;
     struct wl_listener reposition;
+    struct wl_listener new_popup;
 };
 
 static void xdg_view_set_size(struct view* v, int w, int h) {
@@ -244,30 +248,18 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
 
 static void xdg_popup_unconstrain(struct xdg_popup* popup) {
     struct wlr_xdg_popup* xdg_popup = popup->xdg_popup;
-
-    struct wlr_box constraint_box;
-    struct wlr_layer_surface_v1* layer_surface =
-        wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->base->surface);
-
     struct monitor* monitor = popup->parent_view->base.workspace->col->monitor;
+    struct wlr_box constraint_box;
+
     struct wlr_scene_tree* tree = popup->parent_view->surface_tree;
     int toplevel_global_x = 0, toplevel_global_y = 0;
     wlr_scene_node_coords(&tree->node, &toplevel_global_x, &toplevel_global_y);
 
-    if (layer_surface) {
-        // LAYER SHELL
-        // TODO: Make sure this is correct
-        constraint_box.x = monitor->box.x;
-        constraint_box.y = monitor->box.y;
-        constraint_box.width = monitor->output->width;
-        constraint_box.height = monitor->output->height;
-    } else {
-
-        constraint_box.x = monitor->box.x - toplevel_global_x;
-        constraint_box.y = monitor->box.y - toplevel_global_y;
-        constraint_box.width = monitor->output->width;
-        constraint_box.height = monitor->output->height;
-    }
+    constraint_box.x = monitor->box.x - toplevel_global_x;
+    constraint_box.y = monitor->box.y - toplevel_global_y;
+    constraint_box.width =
+        monitor->output->width; // FIX: Both of these should use box?
+    constraint_box.height = monitor->output->height;
     wlr_xdg_popup_unconstrain_from_box(xdg_popup, &constraint_box);
 }
 
@@ -291,11 +283,11 @@ static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&popup->commit.link);
     wl_list_remove(&popup->destroy.link);
     wl_list_remove(&popup->reposition.link);
+    wl_list_remove(&popup->new_popup.link);
 
     free(popup);
 }
 
-// TODO:Nested popups
 void server_new_xdg_popup(struct wl_listener* listener, void* data) {
     struct wlr_xdg_popup* wlr_xdg_popup = data;
     struct xdg_popup* popup = calloc(1, sizeof(*popup));
@@ -309,10 +301,22 @@ void server_new_xdg_popup(struct wl_listener* listener, void* data) {
         free(popup);
         return;
     }
-    popup->parent_view = parent->data;
 
-    wlr_xdg_popup->base->data = wlr_scene_xdg_surface_create(
-        popup->parent_view->surface_tree, wlr_xdg_popup->base);
+    struct wlr_scene_tree* parent_tree = NULL;
+    if (parent->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+        popup->parent_view = parent->data;
+        parent_tree = popup->parent_view->surface_tree;
+
+    } else if (parent->role == WLR_XDG_SURFACE_ROLE_POPUP) {
+        struct xdg_popup* parent_popup = parent->data;
+        popup->parent_view = parent_popup->parent_view;
+        parent_tree = parent_popup->scene_tree;
+    }
+
+    wlr_xdg_popup->base->data = popup;
+
+    popup->scene_tree =
+        wlr_scene_xdg_surface_create(parent_tree, wlr_xdg_popup->base);
 
     popup->commit.notify = xdg_popup_commit;
     wl_signal_add(&wlr_xdg_popup->base->surface->events.commit, &popup->commit);
@@ -322,4 +326,7 @@ void server_new_xdg_popup(struct wl_listener* listener, void* data) {
 
     popup->reposition.notify = xdg_popup_reposition;
     wl_signal_add(&wlr_xdg_popup->events.reposition, &popup->reposition);
+
+    popup->new_popup.notify = server_new_xdg_popup;
+    wl_signal_add(&wlr_xdg_popup->base->events.new_popup, &popup->new_popup);
 }
