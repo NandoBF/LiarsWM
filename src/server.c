@@ -106,6 +106,21 @@ static void server_new_output(struct wl_listener* listener, void* data) {
     }
 }
 
+static void server_output_layout_changed(struct wl_listener* listener,
+                                         void* data) {
+    struct liars_server* server =
+        wl_container_of(listener, server, output_layout_changed);
+
+    struct monitor* m;
+    wl_list_for_each(m, &server->monitors, link) {
+        struct wlr_box layout_box;
+        wlr_output_layout_get_box(server->output_layout, m->output,
+                                  &layout_box);
+        m->box = layout_box;
+        monitor_arrange_layers(m);
+    }
+}
+
 struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
                              struct wlr_surface** surface, double* sx,
                              double* sy) {
@@ -217,6 +232,10 @@ int init_liar_server(struct liars_server* server,
 
     server->new_output.notify = server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
+    server->output_layout_changed.notify = server_output_layout_changed;
+    wl_signal_add(&server->output_layout->events.change,
+                  &server->output_layout_changed);
+
     server->scene = wlr_scene_create();
     server->scene_layout =
         wlr_scene_attach_output_layout(server->scene, server->output_layout);

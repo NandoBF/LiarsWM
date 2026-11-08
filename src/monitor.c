@@ -18,6 +18,7 @@ static void output_destroy(struct wl_listener* listener, void* data) {
 
 // Called when the backend requests a new state for the output.
 static void output_request_state(struct wl_listener* listener, void* data) {
+    wlr_log(WLR_DEBUG, "State requested");
     struct monitor* monitor = wl_container_of(listener, monitor, request_state);
     const struct wlr_output_event_request_state* event = data;
     wlr_output_commit_state(monitor->output, event->state);
@@ -32,6 +33,22 @@ static void output_frame(struct wl_listener* listener, void* data) {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
     wlr_scene_output_send_frame_done(scene_output, &now);
+}
+
+// This function finishes the state
+void monitor_apply_state(struct monitor* monitor,
+                         struct wlr_output_state* state) {
+    if (!wlr_output_commit_state(monitor->output, state)) {
+        wlr_log(WLR_ERROR, "Failed to commit output state!");
+    }
+
+    wlr_output_state_finish(state);
+}
+
+void monitor_set_scale(struct monitor* monitor, float scale) {
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    monitor_apply_state(monitor, &state);
 }
 
 struct monitor* monitor_create(struct liars_server* server,

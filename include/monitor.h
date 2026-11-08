@@ -22,3 +22,5 @@ struct monitor {
 struct monitor* monitor_create(struct liars_server* server,
                                struct wlr_output* output);
 void monitor_arrange_layers(struct monitor* monitor);
+
+void monitor_set_scale(struct monitor* monitor, float scale);

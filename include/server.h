@@ -43,6 +43,7 @@ struct liars_server {
     struct wl_list monitors;
     struct wlr_output_layout* output_layout;
     struct wl_listener new_output;
+    struct wl_listener output_layout_changed;
 
     struct wl_list columns;
     struct workspace* active_workspace;
