@@ -2,7 +2,6 @@
 #include "input/pointer_contraint.h"
 #include "server.h"
 #include "view/view.h"
-#include "wlr/util/log.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -14,12 +13,10 @@ static void warp_to_hint(struct pointer_constraints* pc,
 
     struct view* view = c->surface->data;
     if (!view || c->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
-        wlr_log(WLR_ERROR, "%d", c->type);
         return;
     }
 
     if (!c->current.cursor_hint.enabled) {
-        wlr_log(WLR_ERROR, "Cursor hint isnt enabled!");
         return;
     }
     double sx = c->current.cursor_hint.x;
@@ -42,6 +39,9 @@ static void pointer_constraint_destroy(struct wl_listener* listener,
     struct pointer_constraints* pc =
         wl_container_of(listener, pc, remove_constraint);
     struct wlr_pointer_constraint_v1* c = data;
+    if (pc->active_constraint != c)
+        return;
+
     detach_active_constraint(
         pc); // no need to send deactive since it dies by itself
     pc->dying = c;
@@ -56,7 +56,9 @@ void pointer_constraint_deactivate(struct pointer_constraints* pc) {
 
     detach_active_constraint(pc); // send_deactivated may destroy the contraint
                                   // so detach before calling it
+    pc->dying = c;
     warp_to_hint(pc, c);
+    pc->dying = NULL;
     wlr_pointer_constraint_v1_send_deactivated(c);
 }
 

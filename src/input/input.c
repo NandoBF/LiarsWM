@@ -22,7 +22,6 @@
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
 
-// TODO: Also check pointer focus (wlr_seat_pointer_surface_has_focus()?)
 struct wlr_surface* seat_focused_surface(struct liars_seat* seat) {
     return seat->seat->keyboard_state.focused_surface;
 }
@@ -36,7 +35,7 @@ void reset_cursor_mode(struct liars_cursor* cursor) {
     cursor->grabbed_view = NULL;
 }
 
-// returns true if the pointer is locked
+// returns true if the pointer must not move
 static bool apply_constraint(struct liars_cursor* cursor, double* dx,
                              double* dy) {
     struct wlr_pointer_constraint_v1* c =
@@ -45,25 +44,28 @@ static bool apply_constraint(struct liars_cursor* cursor, double* dx,
         return false;
 
     if (c->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
-        *dx = *dy = 0;
+        *dx = 0;
+        *dy = 0;
         return true;
     }
 
     // confined
     struct view* view = c->surface->data;
-    if (!view)
+    if (!view || !is_view_focused(view))
         return false;
 
-    struct wlr_box box;
-    view->impl->get_geometry(view, &box);
-    double sx = cursor->cursor->x - box.x;
-    double sy = cursor->cursor->y - box.y;
+    double x, y;
+    view->impl->get_surface_layout_pos(view, &x, &y);
+    double sx = cursor->cursor->x - x;
+    double sy = cursor->cursor->y - y;
 
     double cx, cy;
-    if (wlr_region_confine(&c->region, sx, sy, sx + *dx, sy + *dy, &cx, &cy)) {
-        *dx = cx - sx;
-        *dy = cy - sy;
+    if (!wlr_region_confine(&c->region, sx, sy, sx + *dx, sy + *dy, &cx, &cy)) {
+        return true;
     }
+
+    *dx = cx - sx;
+    *dy = cy - sy;
     return false;
 }
 
@@ -77,7 +79,6 @@ static void seat_request_cursor(struct wl_listener* listener, void* data) {
     if (focused_client == event->seat_client) {
         wlr_cursor_set_surface(seat->server->cursor->cursor, event->surface,
                                event->hotspot_x, event->hotspot_y);
-        wlr_log(WLR_INFO, "set_cursor: surface=%p", (void*)event->surface);
     }
 }
 
@@ -452,10 +453,7 @@ static void process_cursor_resize(struct liars_cursor* cursor) {
         }
     }
 
-    struct wlr_box geo_box;
-    view->impl->get_geometry(view, &geo_box);
-    wlr_scene_node_set_position(&view->scene_tree->node, new_left - geo_box.x,
-                                new_top - geo_box.y);
+    wlr_scene_node_set_position(&view->scene_tree->node, new_left, new_top);
 
     int new_width = new_right - new_left;
     int new_height = new_bottom - new_top;
@@ -485,8 +483,7 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
 
     if (surface) {
         wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
-        if (is_surface_focused(cursor->seat, surface))
-            focus_view(view);
+        focus_view(view);
         wlr_seat_pointer_notify_motion(seat, time, sx, sy);
     } else {
         wlr_seat_pointer_clear_focus(seat);
@@ -506,10 +503,11 @@ static void server_cursor_motion(struct wl_listener* listener, void* data) {
             event->unaccel_dy);
     }
     double dx = event->delta_x, dy = event->delta_y;
-    bool locked = apply_constraint(cursor, &dx, &dy);
-    if (!locked) {
+    bool frozen = apply_constraint(cursor, &dx, &dy);
+    if (!frozen) {
         wlr_cursor_move(cursor->cursor, &event->pointer->base, dx, dy);
-    }
+    } else
+        return;
     process_cursor_motion(cursor, event->time_msec);
 }
 
@@ -540,7 +538,8 @@ static void server_cursor_motion_absolute(struct wl_listener* listener,
             wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base,
                                      event->x, event->y);
         }
-    }
+    } else
+        return;
     process_cursor_motion(cursor, event->time_msec);
 }
 

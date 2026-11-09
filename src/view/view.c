@@ -24,7 +24,8 @@ bool is_view_focused(struct view* view) {
     }
     struct wlr_surface* focused_surface =
         seat_focused_surface(view->server->seat);
-    return focused_surface == view->surface;
+    return wlr_surface_get_root_surface(focused_surface) ==
+           wlr_surface_get_root_surface(view->surface);
 }
 
 struct monitor* view_get_monitor(struct view* view) {

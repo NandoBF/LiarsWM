@@ -117,7 +117,9 @@ static void x11_view_map(struct wl_listener* listener, void* data) {
 
     x11_v->surface_tree =
         wlr_scene_subsurface_tree_create(view->scene_tree, view->surface);
-    wlr_scene_node_set_position(&x11_v->surface_tree->node, 5, 5);
+    wlr_scene_node_set_position(&x11_v->surface_tree->node,
+                                view->server->config->border_width,
+                                view->server->config->border_width);
 
     view_map(view);
 }
@@ -171,10 +173,8 @@ static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
 static void x11_view_get_surface_layout_pos(struct view* v, double* x,
                                             double* y) {
     struct x11_view* x11_v = X11_VIEW(v);
-    struct wlr_box geo;
-    x11_view_get_geometry(v, &geo);
-    *x = v->scene_tree->node.x + x11_v->surface_tree->node.x - geo.x;
-    *y = v->scene_tree->node.y + x11_v->surface_tree->node.y - geo.y;
+    *x = v->scene_tree->node.x + x11_v->surface_tree->node.x;
+    *y = v->scene_tree->node.y + x11_v->surface_tree->node.y;
 }
 
 static void x11_view_set_activated(struct view* v, bool activated) {
