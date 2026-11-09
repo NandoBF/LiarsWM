@@ -38,13 +38,13 @@ struct view {
     struct wl_listener initial_commit;
 
     struct wlr_scene_rect* borders[4];
-    struct wlr_box box;
     bool is_fullscreen;
     bool is_floating;
 };
 
 struct view_impl {
     void (*get_geometry)(struct view* v, struct wlr_box* box);
+    void (*get_surface_layout_pos)(struct view* v, double* x, double* y);
     void (*set_size)(struct view* v, int width, int height);
     void (*set_activated)(struct view* v, bool activated);
     void (*close)(struct view* v);

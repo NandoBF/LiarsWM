@@ -7,9 +7,11 @@
 #include "windows/layout.h"
 #include "windows/workspace.h"
 #include "wlr/util/log.h"
+#include <bits/time.h>
 #include <libinput.h>
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
+#include <time.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -17,6 +19,7 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
+#include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
 
 // TODO: Also check pointer focus (wlr_seat_pointer_surface_has_focus()?)
@@ -33,6 +36,37 @@ void reset_cursor_mode(struct liars_cursor* cursor) {
     cursor->grabbed_view = NULL;
 }
 
+// returns true if the pointer is locked
+static bool apply_constraint(struct liars_cursor* cursor, double* dx,
+                             double* dy) {
+    struct wlr_pointer_constraint_v1* c =
+        cursor->seat->pointer_constraints->active_constraint;
+    if (!c)
+        return false;
+
+    if (c->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+        *dx = *dy = 0;
+        return true;
+    }
+
+    // confined
+    struct view* view = c->surface->data;
+    if (!view)
+        return false;
+
+    struct wlr_box box;
+    view->impl->get_geometry(view, &box);
+    double sx = cursor->cursor->x - box.x;
+    double sy = cursor->cursor->y - box.y;
+
+    double cx, cy;
+    if (wlr_region_confine(&c->region, sx, sy, sx + *dx, sy + *dy, &cx, &cy)) {
+        *dx = cx - sx;
+        *dy = cy - sy;
+    }
+    return false;
+}
+
 static void seat_request_cursor(struct wl_listener* listener, void* data) {
     struct liars_seat* seat = wl_container_of(listener, seat, request_cursor);
 
@@ -43,6 +77,7 @@ static void seat_request_cursor(struct wl_listener* listener, void* data) {
     if (focused_client == event->seat_client) {
         wlr_cursor_set_surface(seat->server->cursor->cursor, event->surface,
                                event->hotspot_x, event->hotspot_y);
+        wlr_log(WLR_INFO, "set_cursor: surface=%p", (void*)event->surface);
     }
 }
 
@@ -427,6 +462,7 @@ static void process_cursor_resize(struct liars_cursor* cursor) {
     view->impl->set_size(view, new_width, new_height);
 }
 
+// TODO: Add supress motion
 static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
     if (cursor->cursor_mode == LIARSWM_CURSOR_MOVE) {
         process_cursor_move(cursor);
@@ -436,6 +472,7 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
         return;
     }
 
+    struct pointer_constraints* pc = cursor->seat->pointer_constraints;
     double sx, sy;
     struct wlr_seat* seat = cursor->seat->seat;
     struct wlr_surface* surface = NULL;
@@ -448,12 +485,12 @@ static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
 
     if (surface) {
         wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
-        wlr_seat_pointer_notify_motion(seat, time, sx, sy);
-        if (!is_surface_focused(cursor->seat, surface)) {
+        if (is_surface_focused(cursor->seat, surface))
             focus_view(view);
-        }
+        wlr_seat_pointer_notify_motion(seat, time, sx, sy);
     } else {
         wlr_seat_pointer_clear_focus(seat);
+        pointer_constraint_set_focus(pc, NULL);
     }
 }
 
@@ -461,16 +498,17 @@ static void server_cursor_motion(struct wl_listener* listener, void* data) {
     struct liars_cursor* cursor = wl_container_of(listener, cursor, motion);
     struct wlr_pointer_motion_event* event = data;
 
-    wlr_relative_pointer_manager_v1_send_relative_motion(
-        cursor->seat->pointer_constraints->relative_pointer_manager,
-        cursor->seat->seat, (uint64_t)event->time_msec * 1000, event->delta_x,
-        event->delta_y, event->unaccel_dx, event->unaccel_dy);
-
-    struct wlr_pointer_constraint_v1* constraint =
-        cursor->seat->pointer_constraints->active_constraint;
-    if (!constraint || constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
-        wlr_cursor_move(cursor->cursor, &event->pointer->base, event->delta_x,
-                        event->delta_y);
+    if (cursor->cursor_mode == LIARSWM_CURSOR_PASSTHROUGH) {
+        wlr_relative_pointer_manager_v1_send_relative_motion(
+            cursor->seat->pointer_constraints->relative_pointer_manager,
+            cursor->seat->seat, (uint64_t)event->time_msec * 1000,
+            event->delta_x, event->delta_y, event->unaccel_dx,
+            event->unaccel_dy);
+    }
+    double dx = event->delta_x, dy = event->delta_y;
+    bool locked = apply_constraint(cursor, &dx, &dy);
+    if (!locked) {
+        wlr_cursor_move(cursor->cursor, &event->pointer->base, dx, dy);
     }
     process_cursor_motion(cursor, event->time_msec);
 }
@@ -481,11 +519,27 @@ static void server_cursor_motion_absolute(struct wl_listener* listener,
         wl_container_of(listener, cursor, motion_absolute);
     struct wlr_pointer_motion_absolute_event* event = data;
 
-    struct wlr_pointer_constraint_v1* constraint =
+    struct wlr_pointer_constraint_v1* c =
         cursor->seat->pointer_constraints->active_constraint;
-    if (!constraint || constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
-        wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base,
-                                 event->x, event->y);
+
+    bool locked = c && c->type == WLR_POINTER_CONSTRAINT_V1_LOCKED;
+    if (!locked) {
+        if (c && c->type == WLR_POINTER_CONSTRAINT_V1_CONFINED) {
+            double lx, ly;
+            wlr_cursor_absolute_to_layout_coords(cursor->cursor,
+                                                 &event->pointer->base,
+                                                 event->x, event->y, &lx, &ly);
+
+            double dx = lx - cursor->cursor->x;
+            double dy = ly - cursor->cursor->y;
+
+            apply_constraint(cursor, &dx, &dy);
+            wlr_cursor_warp(cursor->cursor, NULL, cursor->cursor->x + dx,
+                            cursor->cursor->y + dy);
+        } else {
+            wlr_cursor_warp_absolute(cursor->cursor, &event->pointer->base,
+                                     event->x, event->y);
+        }
     }
     process_cursor_motion(cursor, event->time_msec);
 }
@@ -586,12 +640,6 @@ static void server_cursor_axis(struct wl_listener* listener, void* data) {
 static void server_cursor_frame(struct wl_listener* listener, void* data) {
     struct liars_cursor* cursor = wl_container_of(listener, cursor, frame);
     wlr_seat_pointer_notify_frame(cursor->seat->seat);
-}
-
-void cursor_warp_to(struct liars_cursor* cursor, double x, double y) {
-    if (!cursor)
-        return;
-    wlr_cursor_warp(cursor->cursor, NULL, x, y);
 }
 
 struct liars_cursor* create_cursor(struct liars_seat* seat,

@@ -13,6 +13,7 @@ struct pointer_constraints {
 
     struct wlr_pointer_constraint_v1* active_constraint;
     struct wl_listener remove_constraint;
+    struct wlr_pointer_constraint_v1* dying;
 
     struct wlr_relative_pointer_manager_v1* relative_pointer_manager;
 };

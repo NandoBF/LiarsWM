@@ -139,6 +139,15 @@ static void xdg_view_get_geometry(struct view* v, struct wlr_box* box) {
     *box = xv->toplevel->base->geometry;
 }
 
+static void xdg_view_get_surface_layout_pos(struct view* v, double* x,
+                                            double* y) {
+    struct xdg_view* xv = XDG_VIEW(v);
+    struct wlr_box geo;
+    xdg_view_get_geometry(v, &geo);
+    *x = v->scene_tree->node.x + xv->surface_tree->node.x - geo.x;
+    *y = v->scene_tree->node.y + xv->surface_tree->node.y - geo.y;
+}
+
 static void xdg_view_set_activated(struct view* v, bool activated) {
     struct xdg_view* xv = XDG_VIEW(v);
     wlr_xdg_toplevel_set_activated(xv->toplevel, activated);
@@ -184,6 +193,7 @@ static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
 
 static const struct view_impl xdg_view_impl = {
     .get_geometry = xdg_view_get_geometry,
+    .get_surface_layout_pos = xdg_view_get_surface_layout_pos,
     .set_size = xdg_view_set_size,
     .set_activated = xdg_view_set_activated,
     .close = xdg_view_close,

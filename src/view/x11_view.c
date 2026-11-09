@@ -111,6 +111,7 @@ static void x11_view_map(struct wl_listener* listener, void* data) {
     struct x11_view* x11_v = X11_VIEW(view);
 
     view->surface = x11_v->xsurface->surface;
+    view->surface->data = x11_v->xsurface->data;
     view->scene_tree = wlr_scene_tree_create(&view->server->scene->tree);
     view->scene_tree->node.data = view;
 
@@ -165,6 +166,15 @@ static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
     box->y = x11_v->xsurface->y;
     box->width = x11_v->xsurface->width;
     box->height = x11_v->xsurface->height;
+}
+
+static void x11_view_get_surface_layout_pos(struct view* v, double* x,
+                                            double* y) {
+    struct x11_view* x11_v = X11_VIEW(v);
+    struct wlr_box geo;
+    x11_view_get_geometry(v, &geo);
+    *x = v->scene_tree->node.x + x11_v->surface_tree->node.x - geo.x;
+    *y = v->scene_tree->node.y + x11_v->surface_tree->node.y - geo.y;
 }
 
 static void x11_view_set_activated(struct view* v, bool activated) {
@@ -232,6 +242,7 @@ static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
 
 static const struct view_impl x11_view_impl = {
     .get_geometry = x11_view_get_geometry,
+    .get_surface_layout_pos = x11_view_get_surface_layout_pos,
     .set_size = x11_view_set_size,
     .set_activated = x11_view_set_activated,
     .close = x11_view_close,

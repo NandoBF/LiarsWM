@@ -9,22 +9,27 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 
-// TODO: Handle cursor hints
-
 static void warp_to_hint(struct pointer_constraints* pc,
                          struct wlr_pointer_constraint_v1* c) {
-    if (c->type != WLR_POINTER_CONSTRAINT_V1_LOCKED)
-        return;
-    if (!(c->current.committed & WLR_POINTER_CONSTRAINT_V1_STATE_CURSOR_HINT))
-        return;
 
     struct view* view = c->surface->data;
-    if (!view)
+    if (!view || c->type != WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+        wlr_log(WLR_ERROR, "%d", c->type);
         return;
+    }
 
-    cursor_warp_to(pc->seat->server->cursor,
-                   view->box.x + c->current.cursor_hint.x,
-                   view->box.y + c->current.cursor_hint.y);
+    if (!c->current.cursor_hint.enabled) {
+        wlr_log(WLR_ERROR, "Cursor hint isnt enabled!");
+        return;
+    }
+    double sx = c->current.cursor_hint.x;
+    double sy = c->current.cursor_hint.y;
+    double lx, ly;
+    view->impl->get_surface_layout_pos(view, &lx, &ly);
+    if (!wlr_cursor_warp(pc->seat->server->cursor->cursor, NULL, lx + sx,
+                         ly + sy))
+        return;
+    wlr_seat_pointer_warp(pc->seat->seat, sx, sy);
 }
 
 static void detach_active_constraint(struct pointer_constraints* pc) {
@@ -36,9 +41,12 @@ static void pointer_constraint_destroy(struct wl_listener* listener,
                                        void* data) {
     struct pointer_constraints* pc =
         wl_container_of(listener, pc, remove_constraint);
-    warp_to_hint(pc, pc->active_constraint);
+    struct wlr_pointer_constraint_v1* c = data;
     detach_active_constraint(
         pc); // no need to send deactive since it dies by itself
+    pc->dying = c;
+    warp_to_hint(pc, c);
+    pc->dying = NULL;
 }
 
 void pointer_constraint_deactivate(struct pointer_constraints* pc) {
@@ -46,9 +54,9 @@ void pointer_constraint_deactivate(struct pointer_constraints* pc) {
     if (!c)
         return;
 
-    warp_to_hint(pc, c);
     detach_active_constraint(pc); // send_deactivated may destroy the contraint
                                   // so detach before calling it
+    warp_to_hint(pc, c);
     wlr_pointer_constraint_v1_send_deactivated(c);
 }
 
@@ -71,7 +79,7 @@ void pointer_constraint_set_focus(struct pointer_constraints* pc,
         c = wlr_pointer_constraints_v1_constraint_for_surface(
             pc->constraints, view->surface, pc->seat->seat);
     }
-    if (c)
+    if (c && c != pc->dying)
         pointer_constraint_activate(pc, c);
     else
         pointer_constraint_deactivate(pc);
