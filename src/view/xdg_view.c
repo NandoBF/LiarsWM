@@ -207,6 +207,7 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     xv->toplevel = toplevel;
     xv->base.impl = &xdg_view_impl;
     xv->base.surface = toplevel->base->surface;
+    xv->base.surface->data = &xv->base;
     xv->base.server = server;
 
     xv->base.scene_tree = wlr_scene_tree_create(&server->scene->tree);

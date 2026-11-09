@@ -587,6 +587,12 @@ static void server_cursor_frame(struct wl_listener* listener, void* data) {
     wlr_seat_pointer_notify_frame(cursor->seat->seat);
 }
 
+void cursor_warp_to(struct liars_cursor* cursor, double x, double y) {
+    if (!cursor)
+        return;
+    wlr_cursor_warp(cursor->cursor, NULL, x, y);
+}
+
 struct liars_cursor* create_cursor(struct liars_seat* seat,
                                    struct wlr_output_layout* output_layout) {
     struct liars_cursor* cursor = calloc(1, sizeof(*cursor));

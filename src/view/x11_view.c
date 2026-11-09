@@ -272,6 +272,7 @@ void server_new_xwayland_surface(struct wl_listener* listener, void* data) {
     struct x11_view* xv = calloc(1, sizeof(*xv));
     wl_list_init(&xv->base.link);
     xv->xsurface = xsurface;
+    xv->xsurface->data = &xv->base;
     xv->base.impl = &x11_view_impl;
     xv->base.server = server;
     xsurface->data = xv;

@@ -88,6 +88,7 @@ struct liars_cursor* create_cursor(struct liars_seat* seat,
                                    struct wlr_output_layout* output_layout);
 
 void reset_cursor_mode(struct liars_cursor* cursor);
+void cursor_warp_to(struct liars_cursor* cursor, double x, double y);
 void begin_interactive(struct view* view, enum liars_cursor_mode mode,
                        uint32_t edges);
 

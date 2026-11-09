@@ -2,6 +2,7 @@
 #include "input/pointer_contraint.h"
 #include "server.h"
 #include "view/view.h"
+#include "wlr/util/log.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -13,6 +14,23 @@
 void destroy_active_pointer_constraint(struct pointer_constraints* pc) {
     if (pc->active_constraint == NULL)
         return;
+
+    if (pc->active_constraint->current.committed &
+        WLR_POINTER_CONSTRAINT_V1_STATE_CURSOR_HINT) {
+        double hint_x = pc->active_constraint->current.cursor_hint.x;
+        double hint_y = pc->active_constraint->current.cursor_hint.y;
+
+        struct view* view = pc->active_constraint->surface->data;
+        if (!view) {
+            wlr_log(WLR_ERROR, "No view associated with surface!");
+        } else {
+            double global_x = view->box.x + hint_x;
+            double global_y = view->box.y + hint_y;
+
+            cursor_warp_to(pc->seat->server->cursor, global_x, global_y);
+        }
+    }
+
     wlr_pointer_constraint_v1_send_deactivated(pc->active_constraint);
     wl_list_remove(&pc->remove_constraint.link);
 
