@@ -55,7 +55,7 @@ void focus_view(struct view* view) {
     }
 
     if (pc->active_constraint) {
-        destroy_active_pointer_constraint(pc);
+        pointer_constraint_deactivate(pc);
     }
 
     if (prev_surface) {
@@ -71,14 +71,7 @@ void focus_view(struct view* view) {
     // wl_list_remove(&view->link); ??? What was this here for
     // wl_list_insert(&view->workspace->views.tiles, &view->link);
 
-    struct wlr_pointer_constraint_v1* new_constraint =
-        wlr_pointer_constraints_v1_constraint_for_surface(pc->constraints,
-                                                          surface, seat);
-    if (new_constraint) {
-        new_active_pointer_constraint(pc, new_constraint);
-        wlr_log(WLR_INFO, "New pointer constraint for: %s",
-                view->impl->get_title(view));
-    }
+    pointer_constraint_set_focus(pc, view);
 
     view->impl->set_activated(view, true);
 

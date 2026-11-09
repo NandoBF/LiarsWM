@@ -11,59 +11,80 @@
 
 // TODO: Handle cursor hints
 
-void destroy_active_pointer_constraint(struct pointer_constraints* pc) {
-    if (pc->active_constraint == NULL)
+static void warp_to_hint(struct pointer_constraints* pc,
+                         struct wlr_pointer_constraint_v1* c) {
+    if (c->type != WLR_POINTER_CONSTRAINT_V1_LOCKED)
+        return;
+    if (!(c->current.committed & WLR_POINTER_CONSTRAINT_V1_STATE_CURSOR_HINT))
         return;
 
-    if (pc->active_constraint->current.committed &
-        WLR_POINTER_CONSTRAINT_V1_STATE_CURSOR_HINT) {
-        double hint_x = pc->active_constraint->current.cursor_hint.x;
-        double hint_y = pc->active_constraint->current.cursor_hint.y;
+    struct view* view = c->surface->data;
+    if (!view)
+        return;
 
-        struct view* view = pc->active_constraint->surface->data;
-        if (!view) {
-            wlr_log(WLR_ERROR, "No view associated with surface!");
-        } else {
-            double global_x = view->box.x + hint_x;
-            double global_y = view->box.y + hint_y;
+    cursor_warp_to(pc->seat->server->cursor,
+                   view->box.x + c->current.cursor_hint.x,
+                   view->box.y + c->current.cursor_hint.y);
+}
 
-            cursor_warp_to(pc->seat->server->cursor, global_x, global_y);
-        }
-    }
-
-    wlr_pointer_constraint_v1_send_deactivated(pc->active_constraint);
+static void detach_active_constraint(struct pointer_constraints* pc) {
     wl_list_remove(&pc->remove_constraint.link);
-
     pc->active_constraint = NULL;
 }
 
-static void remove_active_constraint(struct wl_listener* listener, void* data) {
+static void pointer_constraint_destroy(struct wl_listener* listener,
+                                       void* data) {
     struct pointer_constraints* pc =
         wl_container_of(listener, pc, remove_constraint);
-    destroy_active_pointer_constraint(pc);
+    warp_to_hint(pc, pc->active_constraint);
+    detach_active_constraint(
+        pc); // no need to send deactive since it dies by itself
 }
 
-void new_active_pointer_constraint(
-    struct pointer_constraints* pc,
-    struct wlr_pointer_constraint_v1* constraint) {
+void pointer_constraint_deactivate(struct pointer_constraints* pc) {
+    struct wlr_pointer_constraint_v1* c = pc->active_constraint;
+    if (!c)
+        return;
 
-    pc->active_constraint = constraint;
-    pc->remove_constraint.notify = remove_active_constraint;
-    wl_signal_add(&pc->active_constraint->events.destroy,
-                  &pc->remove_constraint);
+    warp_to_hint(pc, c);
+    detach_active_constraint(pc); // send_deactivated may destroy the contraint
+                                  // so detach before calling it
+    wlr_pointer_constraint_v1_send_deactivated(c);
+}
 
-    wlr_pointer_constraint_v1_send_activated(pc->active_constraint);
+static void pointer_constraint_activate(struct pointer_constraints* pc,
+                                        struct wlr_pointer_constraint_v1* c) {
+    if (pc->active_constraint == c)
+        return;
+    pointer_constraint_deactivate(pc);
+
+    pc->active_constraint = c;
+    pc->remove_constraint.notify = pointer_constraint_destroy;
+    wl_signal_add(&c->events.destroy, &pc->remove_constraint);
+    wlr_pointer_constraint_v1_send_activated(c);
+}
+
+void pointer_constraint_set_focus(struct pointer_constraints* pc,
+                                  struct view* view) {
+    struct wlr_pointer_constraint_v1* c = NULL;
+    if (view && view->surface) {
+        c = wlr_pointer_constraints_v1_constraint_for_surface(
+            pc->constraints, view->surface, pc->seat->seat);
+    }
+    if (c)
+        pointer_constraint_activate(pc, c);
+    else
+        pointer_constraint_deactivate(pc);
 }
 
 static void handle_new_constraint(struct wl_listener* listener, void* data) {
     struct pointer_constraints* pc =
         wl_container_of(listener, pc, new_constraint);
+    struct wlr_pointer_constraint_v1* c = data;
 
-    struct wlr_pointer_constraint_v1* new_constraint = data;
-    if (!is_surface_focused(pc->seat, new_constraint->surface))
-        return;
-
-    new_active_pointer_constraint(pc, new_constraint);
+    if (is_surface_focused(pc->seat, c->surface)) {
+        pointer_constraint_activate(pc, c);
+    }
 }
 
 struct pointer_constraints*

@@ -3,6 +3,7 @@
 
 struct liars_seat;
 struct liars_server;
+struct view;
 
 struct pointer_constraints {
     struct liars_seat* seat;
@@ -16,8 +17,8 @@ struct pointer_constraints {
     struct wlr_relative_pointer_manager_v1* relative_pointer_manager;
 };
 
-void destroy_active_pointer_constraint(struct pointer_constraints* pc);
-void new_active_pointer_constraint(
-    struct pointer_constraints* pc,
-    struct wlr_pointer_constraint_v1* constraint);
+void pointer_constraint_set_focus(struct pointer_constraints* pc,
+                                  struct view* view);
+
+void pointer_constraint_deactivate(struct pointer_constraints* pc);
 struct pointer_constraints* create_pointer_constraints(struct liars_seat* seat);

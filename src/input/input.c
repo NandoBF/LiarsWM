@@ -19,6 +19,7 @@
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <xkbcommon/xkbcommon.h>
 
+// TODO: Also check pointer focus (wlr_seat_pointer_surface_has_focus()?)
 struct wlr_surface* seat_focused_surface(struct liars_seat* seat) {
     return seat->seat->keyboard_state.focused_surface;
 }
@@ -222,7 +223,7 @@ void seat_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&seat->touch_grab_begin.link);
     wl_list_remove(&seat->touch_grab_end.link);
 
-    destroy_active_pointer_constraint(seat->pointer_constraints);
+    pointer_constraint_deactivate(seat->pointer_constraints);
     free(seat->pointer_constraints);
     free(seat);
 
