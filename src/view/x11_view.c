@@ -117,10 +117,6 @@ static void x11_view_map(struct wl_listener* listener, void* data) {
 
     x11_v->surface_tree =
         wlr_scene_subsurface_tree_create(view->scene_tree, view->surface);
-    wlr_scene_node_set_position(&x11_v->surface_tree->node,
-                                view->server->config->border_width,
-                                view->server->config->border_width);
-
     view_map(view);
 }
 
@@ -164,17 +160,16 @@ static void x11_view_request_configure(struct wl_listener* listener,
 
 static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
     struct x11_view* x11_v = X11_VIEW(v);
-    box->x = x11_v->xsurface->x;
-    box->y = x11_v->xsurface->y;
+    box->x = v->scene_tree->node.x;
+    box->y = v->scene_tree->node.y;
     box->width = x11_v->xsurface->width;
     box->height = x11_v->xsurface->height;
 }
 
 static void x11_view_get_surface_layout_pos(struct view* v, double* x,
                                             double* y) {
-    struct x11_view* x11_v = X11_VIEW(v);
-    *x = v->scene_tree->node.x + x11_v->surface_tree->node.x;
-    *y = v->scene_tree->node.y + x11_v->surface_tree->node.y;
+    *x = v->scene_tree->node.x;
+    *y = v->scene_tree->node.y;
 }
 
 static void x11_view_set_activated(struct view* v, bool activated) {
@@ -218,9 +213,9 @@ static void x11_view_set_size(struct view* v, int w, int h) {
     if (view_height <= 0)
         view_height = 1;
 
-    wlr_xwayland_surface_configure(
-        x11_v->xsurface, v->scene_tree->node.x + config->border_width,
-        v->scene_tree->node.y + config->border_width, view_width, view_height);
+    wlr_xwayland_surface_configure(x11_v->xsurface, v->scene_tree->node.x,
+                                   v->scene_tree->node.y, view_width,
+                                   view_height);
 }
 
 static bool x11_view_want_fullscreen(struct view* v) {

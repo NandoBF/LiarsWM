@@ -92,7 +92,8 @@ static void layout_tiling(struct workspace* ws, int x, int y, int width,
         }
         const int x = current_x + (inner_gap / 2);
         const int y = current_y + (inner_gap / 2);
-        wlr_scene_node_set_position(&view->scene_tree->node, x, y);
+        int bw = ws->col->server->config->border_width;
+        wlr_scene_node_set_position(&view->scene_tree->node, x + bw, y + bw);
         view->impl->set_size(view, w - inner_gap, h - inner_gap);
 
         if (i < n - 1) {

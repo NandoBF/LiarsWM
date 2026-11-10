@@ -452,8 +452,9 @@ static void process_cursor_resize(struct liars_cursor* cursor) {
             new_right = new_left + 1;
         }
     }
-
-    wlr_scene_node_set_position(&view->scene_tree->node, new_left, new_top);
+    int bw = view->workspace->col->server->config->border_width;
+    wlr_scene_node_set_position(&view->scene_tree->node, new_left + bw,
+                                new_top + bw);
 
     int new_width = new_right - new_left;
     int new_height = new_bottom - new_top;
@@ -556,19 +557,22 @@ void begin_interactive(struct view* view, enum liars_cursor_mode mode,
         cursor->grab_y = cursor->cursor->y - view->scene_tree->node.y;
         view->workspace->needs_arrange = true;
     } else {
+        int bw = server->config->border_width;
         struct wlr_box geo_box;
         view->impl->get_geometry(view, &geo_box);
 
-        double border_x = (view->scene_tree->node.x + geo_box.x) +
-                          ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
-        double border_y = (view->scene_tree->node.y + geo_box.y) +
-                          ((edges & WLR_EDGE_BOTTOM) ? geo_box.height : 0);
+        struct wlr_box outer = {.x = geo_box.x - bw,
+                                .y = geo_box.y - bw,
+                                .width = geo_box.width + 2 * bw,
+                                .height = geo_box.height + 2 * bw};
+        double border_x =
+            outer.x + ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
+        double border_y =
+            outer.y + ((edges & WLR_EDGE_BOTTOM) ? geo_box.height : 0);
         cursor->grab_x = cursor->cursor->x - border_x;
         cursor->grab_y = cursor->cursor->y - border_y;
 
-        cursor->grab_geobox = geo_box;
-        cursor->grab_geobox.x += view->scene_tree->node.x;
-        cursor->grab_geobox.y += view->scene_tree->node.y;
+        cursor->grab_geobox = outer;
 
         cursor->resize_edges = edges;
         view->workspace->needs_arrange = true;
@@ -598,10 +602,8 @@ static void server_cursor_button(struct wl_listener* listener, void* data) {
                 struct wlr_box geo_box;
                 view->impl->get_geometry(view, &geo_box);
 
-                double center_x = view->scene_tree->node.x + geo_box.x +
-                                  (geo_box.width / 2.0);
-                double center_y = view->scene_tree->node.y + geo_box.y +
-                                  (geo_box.height / 2.0);
+                double center_x = geo_box.x + (geo_box.width / 2.0);
+                double center_y = geo_box.y + (geo_box.height / 2.0);
 
                 uint32_t edges = 0;
                 edges |= (cursor->cursor->x < center_x) ? WLR_EDGE_LEFT

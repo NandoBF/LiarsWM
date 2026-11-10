@@ -105,19 +105,19 @@ void view_set_borders(struct view* v, int w, int h) {
     if (h < 0)
         h = 0;
     struct config* config = v->server->config;
-    wlr_scene_rect_set_size(v->borders[0], w, config->border_width);
-    wlr_scene_node_set_position(&v->borders[0]->node, 0, 0);
+    int bw = config->border_width;
 
-    wlr_scene_rect_set_size(v->borders[1], w, config->border_width);
-    wlr_scene_node_set_position(&v->borders[1]->node, 0,
-                                h - config->border_width);
+    wlr_scene_rect_set_size(v->borders[0], w, bw);
+    wlr_scene_node_set_position(&v->borders[0]->node, -bw, -bw);
 
-    wlr_scene_rect_set_size(v->borders[2], config->border_width, h);
-    wlr_scene_node_set_position(&v->borders[2]->node, 0, 0);
+    wlr_scene_rect_set_size(v->borders[1], w, bw);
+    wlr_scene_node_set_position(&v->borders[1]->node, -bw, h - 2 * bw);
+
+    wlr_scene_rect_set_size(v->borders[2], bw, h);
+    wlr_scene_node_set_position(&v->borders[2]->node, -bw, -bw);
 
     wlr_scene_rect_set_size(v->borders[3], config->border_width, h);
-    wlr_scene_node_set_position(&v->borders[3]->node, w - config->border_width,
-                                0);
+    wlr_scene_node_set_position(&v->borders[3]->node, w - 2 * bw, -bw);
 }
 
 void view_map(struct view* view) {

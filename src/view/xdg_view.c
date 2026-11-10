@@ -137,15 +137,16 @@ static void xdg_toplevel_request_fullscreen(struct wl_listener* listener,
 static void xdg_view_get_geometry(struct view* v, struct wlr_box* box) {
     struct xdg_view* xv = XDG_VIEW(v);
     *box = xv->toplevel->base->geometry;
+    (*box).x = v->scene_tree->node.x;
+    (*box).y = v->scene_tree->node.y;
 }
 
 static void xdg_view_get_surface_layout_pos(struct view* v, double* x,
                                             double* y) {
-    struct xdg_view* xv = XDG_VIEW(v);
     struct wlr_box geo;
-    xdg_view_get_geometry(v, &geo);
-    *x = v->scene_tree->node.x + xv->surface_tree->node.x - geo.x;
-    *y = v->scene_tree->node.y + xv->surface_tree->node.y - geo.y;
+    xdg_view_get_geometry(v, &geo); // probably unecessary call but wtv
+    *x = v->scene_tree->node.x - geo.x;
+    *y = v->scene_tree->node.y - geo.y;
 }
 
 static void xdg_view_set_activated(struct view* v, bool activated) {
@@ -210,7 +211,6 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     struct wlr_xdg_toplevel* toplevel = data;
     struct liars_server* server =
         wl_container_of(listener, server, new_xdg_toplevel);
-    struct config* config = server->config;
 
     struct xdg_view* xv = calloc(1, sizeof(*xv));
     wl_list_init(&xv->base.link);
@@ -225,8 +225,6 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
 
     xv->surface_tree =
         wlr_scene_xdg_surface_create(xv->base.scene_tree, xv->toplevel->base);
-    wlr_scene_node_set_position(&xv->surface_tree->node, config->border_width,
-                                config->border_width);
 
     xv->base.map.notify = xdg_toplevel_map;
     wl_signal_add(&toplevel->base->surface->events.map, &xv->base.map);

@@ -184,6 +184,8 @@ void column_try_remove(struct liars_server* server, struct column* col) {
     col = NULL;
 }
 
+// FIX: Fullscreen window is 2*bw smaller than entire screen
+// Either make it bigger or block set_size from using bw when fullscreen
 void workspace_set_fullscreen(struct view* view) {
     wlr_scene_node_raise_to_top(&view->scene_tree->node);
     wlr_scene_node_set_position(&view->scene_tree->node, 0, 0);
