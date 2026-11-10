@@ -205,8 +205,9 @@ static void x11_view_set_size(struct view* v, int w, int h) {
     }
 
     struct config* config = v->server->config;
-    int view_width = w - (2 * config->border_width);
-    int view_height = h - (2 * config->border_width);
+    int bw = v->is_fullscreen ? 0 : 2 * config->border_width;
+    int view_width = w - bw;
+    int view_height = h - bw;
 
     if (view_width <= 0)
         view_width = 1;

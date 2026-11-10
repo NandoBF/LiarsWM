@@ -52,9 +52,10 @@ static void layout_master_stack(struct workspace* ws, int x, int y, int width,
             view_h = stack_height;
         }
 
+        int bw = ws->col->server->config->border_width;
         wlr_scene_node_set_position(&view->scene_tree->node,
-                                    view_x + (inner_gap / 2),
-                                    view_y + (inner_gap / 2));
+                                    view_x + (inner_gap / 2) + bw,
+                                    view_y + (inner_gap / 2) + bw);
         view->impl->set_size(view, view_w - inner_gap, view_h - inner_gap);
 
         i++;

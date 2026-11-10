@@ -566,9 +566,9 @@ void begin_interactive(struct view* view, enum liars_cursor_mode mode,
                                 .width = geo_box.width + 2 * bw,
                                 .height = geo_box.height + 2 * bw};
         double border_x =
-            outer.x + ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
+            outer.x + ((edges & WLR_EDGE_RIGHT) ? outer.width : 0);
         double border_y =
-            outer.y + ((edges & WLR_EDGE_BOTTOM) ? geo_box.height : 0);
+            outer.y + ((edges & WLR_EDGE_BOTTOM) ? outer.height : 0);
         cursor->grab_x = cursor->cursor->x - border_x;
         cursor->grab_y = cursor->cursor->y - border_y;
 

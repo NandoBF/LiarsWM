@@ -41,9 +41,10 @@ static void xdg_view_set_size(struct view* v, int w, int h) {
         view_set_borders(v, w, h);
     }
     struct config* config = v->server->config;
+    int bw = v->is_fullscreen ? 0 : 2 * config->border_width;
 
-    int view_width = w - (2 * config->border_width);
-    int view_height = h - (2 * config->border_width);
+    int view_width = w - bw;
+    int view_height = h - bw;
 
     if (view_width <= 0)
         view_width = 1;
@@ -143,8 +144,8 @@ static void xdg_view_get_geometry(struct view* v, struct wlr_box* box) {
 
 static void xdg_view_get_surface_layout_pos(struct view* v, double* x,
                                             double* y) {
-    struct wlr_box geo;
-    xdg_view_get_geometry(v, &geo); // probably unecessary call but wtv
+    struct xdg_view* xv = XDG_VIEW(v);
+    struct wlr_box geo = xv->toplevel->base->geometry;
     *x = v->scene_tree->node.x - geo.x;
     *y = v->scene_tree->node.y - geo.y;
 }

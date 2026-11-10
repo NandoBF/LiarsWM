@@ -116,7 +116,7 @@ void view_set_borders(struct view* v, int w, int h) {
     wlr_scene_rect_set_size(v->borders[2], bw, h);
     wlr_scene_node_set_position(&v->borders[2]->node, -bw, -bw);
 
-    wlr_scene_rect_set_size(v->borders[3], config->border_width, h);
+    wlr_scene_rect_set_size(v->borders[3], bw, h);
     wlr_scene_node_set_position(&v->borders[3]->node, w - 2 * bw, -bw);
 }
 
