@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
@@ -20,7 +21,9 @@
 void command_spawn(struct liars_server* server, const char* command,
                    int client_fd) {
     wlr_log(WLR_INFO, "Spawning: %s", command);
-    if (fork() == 0) {
+    pid_t pid = fork();
+
+    if (pid == 0) {
         setsid();
 
         if (fork() == 0) {
@@ -32,7 +35,8 @@ void command_spawn(struct liars_server* server, const char* command,
             if (fd >= 0) {
                 dup2(fd, STDIN_FILENO);
                 dup2(fd, STDOUT_FILENO);
-                dup2(fd, STDERR_FILENO);
+                // Leaving STDERR_FILENO untouched so exec failures can be
+                // logged
                 close(fd);
             }
 
@@ -41,7 +45,17 @@ void command_spawn(struct liars_server* server, const char* command,
             wlr_log(WLR_ERROR, "Failed to exec shell for command: %s", command);
             _exit(1);
         }
+
         _exit(0);
+
+    } else if (pid > 0) {
+        // MUST kill the first child to prevent zombies!
+        // this completes in microseconds and will not block the event loop
+        waitpid(pid, NULL, 0);
+
+    } else {
+        wlr_log(WLR_ERROR, "Failed to fork first child for command: %s",
+                command);
     }
 }
 
