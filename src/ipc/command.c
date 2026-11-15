@@ -142,9 +142,9 @@ void command_set_floating(struct liars_server* server, const char* command,
 
 void command_reload_config(struct liars_server* server, const char* command,
                            int client_fd) {
-    struct config* new_conf = load_config("./config/nested.toml");
+    struct config* new_conf = load_config(server->config->file_path);
     if (new_conf) {
-        free(server->config);
+        config_destroy(server->config);
         server->config = new_conf;
     }
 }

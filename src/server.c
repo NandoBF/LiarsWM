@@ -256,7 +256,8 @@ static void server_activation_request(struct wl_listener* listener,
 }
 
 int init_liar_server(struct liars_server* server,
-                     enum wlr_log_importance log_level) {
+                     enum wlr_log_importance log_level,
+                     char* config_file_path) {
 
     server->wl_display = wl_display_create();
     server->event_loop = wl_display_get_event_loop(server->wl_display);
@@ -368,7 +369,7 @@ int init_liar_server(struct liars_server* server,
         return 1;
     }
 
-    struct config* config = load_config("./config/nested.toml");
+    struct config* config = load_config(config_file_path);
     server->config = config;
 
     wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");

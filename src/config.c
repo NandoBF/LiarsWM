@@ -80,8 +80,16 @@ static void load_keybinds(struct config* c, toml_datum_t root) {
     wlr_log(WLR_INFO, "Loaded %d keybinds", c->keybind_num);
 }
 
+void config_destroy(struct config* config) {
+    free(config->file_path);
+    free(config->keybinds);
+
+    free(config);
+}
+
 struct config* load_config(const char* config_path) {
     struct config* c = calloc(1, sizeof(*c));
+    c->file_path = strdup(config_path);
     // FIX:
     c->keybinds = calloc(20, sizeof(struct liars_keybind*));
 

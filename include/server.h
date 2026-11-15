@@ -80,5 +80,5 @@ void focus_view_under_cursor(struct liars_server* server);
 
 void server_run(struct liars_server* server);
 int init_liar_server(struct liars_server* server,
-                     enum wlr_log_importance log_level);
+                     enum wlr_log_importance log_level, char* config_file_path);
 struct workspace* get_active_workspace(struct liars_server* server);

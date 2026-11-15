@@ -14,6 +14,7 @@
 #define MODKEY WLR_MODIFIER_CTRL
 
 struct config {
+    char* file_path;
     int border_width;
     int inner_gap;
     int outer_gap;
@@ -27,3 +28,4 @@ struct config {
 };
 
 struct config* load_config(const char* config_path);
+void config_destroy(struct config* config);
