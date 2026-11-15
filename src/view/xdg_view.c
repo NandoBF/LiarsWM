@@ -267,9 +267,8 @@ static void xdg_popup_unconstrain(struct xdg_popup* popup) {
 
     constraint_box.x = monitor->box.x - toplevel_global_x;
     constraint_box.y = monitor->box.y - toplevel_global_y;
-    constraint_box.width =
-        monitor->output->width; // FIX: Both of these should use box?
-    constraint_box.height = monitor->output->height;
+    constraint_box.width = monitor->box.width;
+    constraint_box.height = monitor->box.height;
     wlr_xdg_popup_unconstrain_from_box(xdg_popup, &constraint_box);
 }
 
@@ -300,6 +299,9 @@ static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
 
 void server_new_xdg_popup(struct wl_listener* listener, void* data) {
     struct wlr_xdg_popup* wlr_xdg_popup = data;
+    if (!wlr_xdg_popup->parent)
+        return; // ignore layer surface popups, handled elsewhere
+
     struct xdg_popup* popup = calloc(1, sizeof(*popup));
     popup->xdg_popup = wlr_xdg_popup;
 

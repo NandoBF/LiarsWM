@@ -4,9 +4,23 @@
 #include "server.h"
 #include "windows/workspace.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
+#include "wlr/util/log.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+
+// TODO: Refactor popup structs ?
+
+struct layer_surface_popup {
+    struct wlr_xdg_popup* xdg_popup;
+    struct layer_surface* parent_shell;
+    struct wlr_scene_tree* scene_tree;
+
+    struct wl_listener commit;
+    struct wl_listener destroy;
+    struct wl_listener reposition;
+    struct wl_listener new_popup;
+};
 
 static bool layer_wants_exclusive_keyboard(struct wlr_layer_surface_v1* layer) {
     bool t = layer->pending.keyboard_interactive ==
@@ -36,6 +50,8 @@ static void layer_surface_map(struct wl_listener* listener, void* data) {
     struct wlr_layer_surface_v1* layer_surface = ls->wlr_layer_surface;
 
     // TODO: Prevent focus change when exclusive keyboard
+    // Meaning, if the layer surface has exclusive surface, focus_view shouldn't
+    // work
     if (layer_wants_exclusive_keyboard(layer_surface)) {
         struct wlr_seat* seat = ls->server->seat->seat;
         struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
@@ -45,6 +61,60 @@ static void layer_surface_map(struct wl_listener* listener, void* data) {
                 keyboard->num_keycodes, &keyboard->modifiers);
         }
     }
+}
+
+static void layer_surface_popup_commit(struct wl_listener* listener,
+                                       void* data) {
+    struct layer_surface_popup* popup =
+        wl_container_of(listener, popup, commit);
+    if (!popup->xdg_popup->base->initial_commit)
+        return;
+    wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+}
+
+static void layer_surface_popup_destroy(struct wl_listener* listener,
+                                        void* data) {
+    struct layer_surface_popup* popup =
+        wl_container_of(listener, popup, destroy);
+
+    wl_list_remove(&popup->commit.link);
+    wl_list_remove(&popup->destroy.link);
+    wl_list_remove(&popup->reposition.link);
+    wl_list_remove(&popup->new_popup.link);
+
+    free(popup);
+    popup = NULL;
+}
+
+static void layer_surface_popup_reposition(struct wl_listener* listener,
+                                           void* data) {}
+
+static void layer_surface_new_popup(struct wl_listener* listener, void* data) {
+    struct layer_surface* ls = wl_container_of(listener, ls, new_popup);
+    wlr_log(WLR_INFO, "New layer shell popup!");
+    struct wlr_xdg_popup* wlr_xdg_popup = data;
+
+    struct layer_surface_popup* popup = calloc(1, sizeof(*popup));
+    popup->parent_shell = ls;
+    popup->xdg_popup = wlr_xdg_popup;
+    wlr_xdg_popup->base->data = popup;
+    wlr_xdg_popup->parent = ls->wlr_layer_surface->surface;
+
+    struct wlr_scene_tree* parent_tree = ls->scene->tree;
+    popup->scene_tree =
+        wlr_scene_xdg_surface_create(parent_tree, wlr_xdg_popup->base);
+
+    popup->commit.notify = layer_surface_popup_commit;
+    wl_signal_add(&wlr_xdg_popup->base->surface->events.commit, &popup->commit);
+
+    popup->destroy.notify = layer_surface_popup_destroy;
+    wl_signal_add(&wlr_xdg_popup->events.destroy, &popup->destroy);
+
+    popup->reposition.notify = layer_surface_popup_reposition;
+    wl_signal_add(&wlr_xdg_popup->events.reposition, &popup->reposition);
+
+    popup->new_popup.notify = layer_surface_new_popup;
+    wl_signal_add(&wlr_xdg_popup->base->events.new_popup, &popup->new_popup);
 }
 
 static void layer_surface_unmap(struct wl_listener* listener, void* data) {
@@ -64,6 +134,7 @@ static void layer_surface_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&ls->unmap.link);
     wl_list_remove(&ls->commit.link);
     wl_list_remove(&ls->destroy.link);
+    wl_list_remove(&ls->new_popup.link);
     wl_list_remove(&ls->link);
 
     monitor_arrange_layers(ls->monitor);
@@ -90,6 +161,7 @@ void server_new_layer_shell_surface(struct wl_listener* listener, void* data) {
 
     ls->scene = wlr_scene_layer_surface_v1_create(&server->scene->tree,
                                                   wlr_layer_surface);
+    ls->popups_tree = wlr_scene_tree_create(&server->scene->tree);
 
     ls->commit.notify = layer_surface_commit;
     wl_signal_add(&wlr_layer_surface->surface->events.commit, &ls->commit);
@@ -101,4 +173,7 @@ void server_new_layer_shell_surface(struct wl_listener* listener, void* data) {
 
     ls->destroy.notify = layer_surface_destroy;
     wl_signal_add(&wlr_layer_surface->events.destroy, &ls->destroy);
+
+    ls->new_popup.notify = layer_surface_new_popup;
+    wl_signal_add(&wlr_layer_surface->events.new_popup, &ls->new_popup);
 }
