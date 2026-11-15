@@ -105,7 +105,10 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
 static void xdg_toplevel_request_move(struct wl_listener* listener,
                                       void* data) {
     struct view* view = wl_container_of(listener, view, request_move);
-    // TODO: Empty? Perhaps ignoring is the correct thing
+    struct xdg_view* xdg_view = XDG_VIEW(view);
+    if (xdg_view->toplevel->base->initialized) {
+        wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
+    }
 }
 
 static void xdg_toplevel_request_resize(struct wl_listener* listener,
@@ -113,6 +116,11 @@ static void xdg_toplevel_request_resize(struct wl_listener* listener,
 
     struct view* view = wl_container_of(listener, view, request_resize);
     struct wlr_xdg_toplevel_resize_event* event = data;
+
+    struct xdg_view* xdg_view = XDG_VIEW(view);
+    if (xdg_view->toplevel->base->initialized) {
+        wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
+    }
 }
 
 static void xdg_toplevel_request_maximize(struct wl_listener* listener,
