@@ -21,41 +21,63 @@
 void command_spawn(struct liars_server* server, const char* command,
                    int client_fd) {
     wlr_log(WLR_INFO, "Spawning: %s", command);
+
+    int err_pipe[2];
+    if (pipe2(err_pipe, O_CLOEXEC) < 0) {
+        wlr_log_errno(WLR_ERROR, "pipe2 failed for command: %s", command);
+        return;
+    }
+
     pid_t pid = fork();
 
     if (pid == 0) {
+        close(err_pipe[0]);
         setsid();
 
-        if (fork() == 0) {
+        pid_t pid2 = fork();
+        if (pid2 == 0) {
             sigset_t set;
             sigemptyset(&set);
             sigprocmask(SIG_SETMASK, &set, NULL);
+
+            signal(SIGPIPE, SIG_DFL);
 
             int fd = open("/dev/null", O_RDWR);
             if (fd >= 0) {
                 dup2(fd, STDIN_FILENO);
                 dup2(fd, STDOUT_FILENO);
-                // Leaving STDERR_FILENO untouched so exec failures can be
-                // logged
-                close(fd);
+                dup2(fd, STDERR_FILENO);
+                if (fd > STDERR_FILENO)
+                    close(fd);
             }
 
             execl("/bin/sh", "/bin/sh", "-c", command, (char*)NULL);
 
-            wlr_log(WLR_ERROR, "Failed to exec shell for command: %s", command);
+            int e = errno;
+            (void)!write(err_pipe[1], &e, sizeof(e));
             _exit(1);
         }
 
-        _exit(0);
+        _exit(pid2 < 0 ? 1 : 0);
 
     } else if (pid > 0) {
-        // MUST kill the first child to prevent zombies!
-        // this completes in microseconds and will not block the event loop
+        close(err_pipe[1]);
         waitpid(pid, NULL, 0);
 
+        int e;
+        ssize_t n = read(err_pipe[0], &e, sizeof(e));
+        if (n == (ssize_t)sizeof(e)) {
+            errno = e;
+            wlr_log_errno(WLR_ERROR, "Failed to exec shell for command: %s",
+                          command);
+        }
+        close(err_pipe[0]);
+
     } else {
-        wlr_log(WLR_ERROR, "Failed to fork first child for command: %s",
-                command);
+        wlr_log_errno(WLR_ERROR, "Failed to fork first child for command: %s",
+                      command);
+        close(err_pipe[0]);
+        close(err_pipe[1]);
     }
 }
 

@@ -9,6 +9,7 @@ cc = meson.get_compiler('c')
 toml = cc.find_library('tomlc17', dirs: meson.current_source_dir() / 'lib', required: true)
 
 add_project_arguments('-DWLR_USE_UNSTABLE', language: 'c')
+add_project_arguments('-D_GNU_SOURCE', language: 'c')
 
 incdir = include_directories('include')
 
