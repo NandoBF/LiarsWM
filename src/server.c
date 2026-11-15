@@ -2,7 +2,7 @@
 #include "config.h"
 #include "input/input.h"
 #include "ipc/ipc.h"
-#include "layer_shell.h"
+#include "layer_surface.h"
 #include "monitor.h"
 #include "view/view.h"
 #include "view/x11_view.h"
@@ -14,7 +14,6 @@
 #include <bits/time.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -126,7 +125,6 @@ static void server_new_output(struct wl_listener* listener, void* data) {
 
     wl_list_insert(&server->monitors, &monitor->link);
 
-    // FIX: This will focus column 1 if a second monitor is disconnected
     if (wl_list_length(&server->monitors) == 1) {
         struct column* col = column_get_or_create(server, monitor, "1");
         if (!col) {

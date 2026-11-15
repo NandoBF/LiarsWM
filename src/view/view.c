@@ -5,8 +5,6 @@
 #include "monitor.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"
-#include "wlr/util/log.h"
-#include <stdlib.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/xwayland/xwayland.h>
@@ -70,8 +68,6 @@ void focus_view(struct view* view) {
 
     struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
     wlr_scene_node_raise_to_top(&view->scene_tree->node);
-    // wl_list_remove(&view->link); ??? What was this here for
-    // wl_list_insert(&view->workspace->views.tiles, &view->link);
 
     pointer_constraint_set_focus(pc, view);
 
@@ -146,7 +142,6 @@ void view_set_borders(struct view* v, int w, int h) {
     wlr_scene_node_set_position(&v->borders[3]->node, w - 2 * bw, -bw);
 }
 
-// TODO: Change map policy to use the activation tokens
 void view_map(struct view* view) {
     view->mapped = true;
     map_borders(view);

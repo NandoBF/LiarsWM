@@ -1,5 +1,5 @@
 #include "monitor.h"
-#include "layer_shell.h"
+#include "layer_surface.h"
 #include "server.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"

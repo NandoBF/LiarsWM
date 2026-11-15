@@ -1,10 +1,9 @@
-#include "layer_shell.h"
+#include "layer_surface.h"
 #include "input/input.h"
 #include "monitor.h"
 #include "server.h"
 #include "windows/workspace.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
-#include "wlr/util/log.h"
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -91,7 +90,6 @@ static void layer_surface_popup_reposition(struct wl_listener* listener,
 
 static void layer_surface_new_popup(struct wl_listener* listener, void* data) {
     struct layer_surface* ls = wl_container_of(listener, ls, new_popup);
-    wlr_log(WLR_INFO, "New layer shell popup!");
     struct wlr_xdg_popup* wlr_xdg_popup = data;
 
     struct layer_surface_popup* popup = calloc(1, sizeof(*popup));
