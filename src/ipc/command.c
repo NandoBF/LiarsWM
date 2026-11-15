@@ -28,6 +28,14 @@ void command_spawn(struct liars_server* server, const char* command,
         return;
     }
 
+    struct wlr_xdg_activation_token_v1* token =
+        wlr_xdg_activation_token_v1_create(server->xdg_activation);
+    const char* token_name = NULL;
+
+    if (token) {
+        token->data = server;
+        token_name = wlr_xdg_activation_token_v1_get_name(token);
+    }
     pid_t pid = fork();
 
     if (pid == 0) {
@@ -49,6 +57,9 @@ void command_spawn(struct liars_server* server, const char* command,
                 dup2(fd, STDERR_FILENO);
                 if (fd > STDERR_FILENO)
                     close(fd);
+            }
+            if (token_name) {
+                setenv("XDG_ACTIVATION_TOKEN", token_name, 1);
             }
 
             execl("/bin/sh", "/bin/sh", "-c", command, (char*)NULL);

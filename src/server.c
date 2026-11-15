@@ -4,6 +4,7 @@
 #include "ipc/ipc.h"
 #include "layer_shell.h"
 #include "monitor.h"
+#include "view/view.h"
 #include "view/x11_view.h"
 #include "view/xdg_view.h"
 #include "windows/decoration.h"
@@ -22,6 +23,38 @@
 #include <wlr/util/log.h>
 #include <wlr/xwayland.h>
 #include <xkbcommon/xkbcommon.h>
+
+struct activation_token_data {
+    struct wl_listener destroy;
+    bool had_focused_surface;
+    bool had_valid_seat;
+};
+
+static void activation_token_data_destroy(struct wl_listener* listener,
+                                          void* data) {
+    struct activation_token_data* td = wl_container_of(listener, td, destroy);
+    free(td);
+}
+
+static void server_activation_new_token(struct wl_listener* listener,
+                                        void* data) {
+    struct wlr_xdg_activation_token_v1* token = data;
+
+    if (token->data != NULL)
+        return;
+
+    struct activation_token_data* td = calloc(1, sizeof(*td));
+    if (!td)
+        return;
+
+    td->had_focused_surface = token->surface != NULL;
+    td->had_valid_seat = token->seat != NULL;
+
+    td->destroy.notify = activation_token_data_destroy;
+    wl_signal_add(&token->events.destroy, &td->destroy);
+
+    token->data = td;
+}
 
 // NOTE: Can directly save the focused view if needed later
 struct view* get_focused_view(struct liars_server* server) {
@@ -193,6 +226,37 @@ void focus_view_under_cursor(struct liars_server* server) {
     }
 }
 
+// TODO: Correctly handle this for views not in the current workspace
+static void server_activation_request(struct wl_listener* listener,
+                                      void* data) {
+
+    struct liars_server* server =
+        wl_container_of(listener, server, activation_request);
+    struct wlr_xdg_activation_v1_request_activate_event* event = data;
+
+    struct view* view = view_from_activation_surface(event->surface);
+    if (!view)
+        return;
+
+    // startup notification
+    // TODO: add a pending activate to consume in view_map
+    if (!view->mapped)
+        return;
+
+    bool internal = event->token->data == server;
+    struct activation_token_data* td = internal ? NULL : event->token->data;
+    bool trusted = internal || event->token->surface != NULL ||
+                   event->token->seat != NULL ||
+                   (td && (td->had_focused_surface || td->had_valid_seat));
+
+    if (!trusted) {
+        wlr_log(WLR_DEBUG, "Ignoring untrusted activation request");
+        return;
+    }
+
+    focus_view(view);
+}
+
 int init_liar_server(struct liars_server* server,
                      enum wlr_log_importance log_level) {
 
@@ -209,7 +273,7 @@ int init_liar_server(struct liars_server* server,
     server->renderer = wlr_renderer_autocreate(server->backend);
     if (server->renderer == NULL) {
         wlr_log(WLR_ERROR, "Could not start renderer");
-        return 2;
+        return 1;
     }
     wlr_renderer_init_wl_display(server->renderer, server->wl_display);
 
@@ -217,7 +281,7 @@ int init_liar_server(struct liars_server* server,
         wlr_allocator_autocreate(server->backend, server->renderer);
     if (server->allocator == NULL) {
         wlr_log(WLR_ERROR, "Could not start allocator");
-        return 3;
+        return 1;
     }
 
     struct wlr_compositor* wlr_compositor =
@@ -239,6 +303,19 @@ int init_liar_server(struct liars_server* server,
     server->scene = wlr_scene_create();
     server->scene_layout =
         wlr_scene_attach_output_layout(server->scene, server->output_layout);
+
+    server->xdg_activation = wlr_xdg_activation_v1_create(server->wl_display);
+    if (!server->xdg_activation) {
+        wlr_log(WLR_ERROR, "Failed to create xdg_activation_v1");
+        return 1;
+    }
+    server->activation_request.notify = server_activation_request;
+    wl_signal_add(&server->xdg_activation->events.request_activate,
+                  &server->activation_request);
+
+    server->activation_new_token.notify = server_activation_new_token;
+    wl_signal_add(&server->xdg_activation->events.new_token,
+                  &server->activation_new_token);
 
     server->xdg_shell = wlr_xdg_shell_create(server->wl_display, 3);
     server->new_xdg_toplevel.notify = server_new_xdg_toplevel;

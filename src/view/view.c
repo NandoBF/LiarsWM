@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/xwayland/xwayland.h>
 
 bool is_surface_focused(struct liars_seat* seat, struct wlr_surface* surface) {
     struct wlr_surface* focused = seat_focused_surface(seat);
@@ -83,6 +84,31 @@ void focus_view(struct view* view) {
     }
 }
 
+struct view* view_from_activation_surface(struct wlr_surface* surface) {
+    if (!surface)
+        return NULL;
+
+    struct wlr_surface* root = wlr_surface_get_root_surface(surface);
+    struct wlr_xdg_surface* xdg = wlr_xdg_surface_try_from_wlr_surface(root);
+
+    if (xdg) {
+        if (xdg->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL)
+            return NULL;
+
+        struct view* view = root->data;
+        return (view && view->surface == root) ? view : NULL;
+    }
+
+    struct wlr_xwayland_surface* x11 =
+        wlr_xwayland_surface_try_from_wlr_surface(root);
+    if (x11) {
+        struct view* view = x11->data;
+        return (view && view->surface == root) ? view : NULL;
+    }
+
+    return NULL;
+}
+
 static void map_borders(struct view* view) {
     if (view->is_fullscreen)
         return;
@@ -120,6 +146,7 @@ void view_set_borders(struct view* v, int w, int h) {
     wlr_scene_node_set_position(&v->borders[3]->node, w - 2 * bw, -bw);
 }
 
+// TODO: Change map policy to use the activation tokens
 void view_map(struct view* view) {
     view->mapped = true;
     map_borders(view);
