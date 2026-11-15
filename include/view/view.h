@@ -21,6 +21,7 @@ struct view {
     struct wlr_scene_tree* scene_tree;
 
     struct workspace* workspace;
+    bool pending_activate;
     bool mapped;
 
     struct wl_listener destroy;

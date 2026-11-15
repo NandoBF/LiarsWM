@@ -226,7 +226,6 @@ void focus_view_under_cursor(struct liars_server* server) {
     }
 }
 
-// TODO: Correctly handle this for views not in the current workspace
 static void server_activation_request(struct wl_listener* listener,
                                       void* data) {
 
@@ -238,11 +237,6 @@ static void server_activation_request(struct wl_listener* listener,
     if (!view)
         return;
 
-    // startup notification
-    // TODO: add a pending activate to consume in view_map
-    if (!view->mapped)
-        return;
-
     bool internal = event->token->data == server;
     struct activation_token_data* td = internal ? NULL : event->token->data;
     bool trusted = internal || event->token->surface != NULL ||
@@ -251,6 +245,12 @@ static void server_activation_request(struct wl_listener* listener,
 
     if (!trusted) {
         wlr_log(WLR_DEBUG, "Ignoring untrusted activation request");
+        return;
+    }
+
+    // startup notification
+    if (!view->mapped) {
+        view->pending_activate = true;
         return;
     }
 

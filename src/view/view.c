@@ -152,7 +152,17 @@ void view_map(struct view* view) {
     map_borders(view);
     workspace_spawn(get_active_workspace(view->server), view);
 
-    focus_view(view);
+    bool activate = view->pending_activate;
+    view->pending_activate = false;
+
+    if (activate) {
+        // default map policy
+        if (view->server->active_workspace == view->workspace) {
+            focus_view(view);
+        }
+    } else {
+        // maybe mark it urgent in the future?
+    }
 }
 
 // This does not free the view. It must be freed after
