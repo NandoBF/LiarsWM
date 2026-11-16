@@ -32,6 +32,8 @@ struct activation_token_data {
 static void activation_token_data_destroy(struct wl_listener* listener,
                                           void* data) {
     struct activation_token_data* td = wl_container_of(listener, td, destroy);
+
+    wl_list_remove(&td->destroy.link);
     free(td);
 }
 
