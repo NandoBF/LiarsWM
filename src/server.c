@@ -387,3 +387,33 @@ int init_liar_server(struct liars_server* server,
     wlr_log(WLR_DEBUG, "Liar server initiated");
     return 0;
 }
+
+void server_cleanup(struct liars_server* server) {
+    wl_list_remove(&server->new_output.link);
+    wl_list_remove(&server->output_layout_changed.link);
+    wl_list_remove(&server->activation_request.link);
+    wl_list_remove(&server->activation_new_token.link);
+    wl_list_remove(&server->new_xdg_toplevel.link);
+    wl_list_remove(&server->new_xdg_popup.link);
+    wl_list_remove(&server->new_layer_shell_surface.link);
+    wl_list_remove(&server->new_view_decoration.link);
+    if (server->xwayland)
+        wl_list_remove(&server->new_xwayland_surface.link);
+
+    ipc_server_destroy(server->ipc_server);
+    server->ipc_server = NULL;
+
+    if (server->xwayland)
+        wlr_xwayland_destroy(server->xwayland);
+
+    wl_display_destroy_clients(server->wl_display);
+
+    if (server->seat)
+        wlr_seat_destroy(server->seat->seat);
+    wlr_output_layout_destroy(server->output_layout);
+    wlr_backend_destroy(server->backend);
+    wl_display_destroy(server->wl_display);
+
+    config_destroy(server->config);
+    server->config = NULL;
+}

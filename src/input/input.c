@@ -240,9 +240,22 @@ static void seat_request_start_drag(struct wl_listener* listener, void* data) {
     }
 }
 
+void seat_destroy_keyboards(struct liars_seat* seat) {
+    struct liars_keyboard* kb;
+    struct liars_keyboard* tmp;
+    wl_list_for_each_safe(kb, tmp, &seat->keyboards, link) {
+        wl_list_remove(&kb->key.link);
+        wl_list_remove(&kb->modifiers.link);
+        wl_list_remove(&kb->destroy.link);
+        wl_list_remove(&kb->link);
+        free(kb);
+    }
+}
+
 void seat_destroy(struct wl_listener* listener, void* data) {
     struct liars_seat* seat = wl_container_of(listener, seat, destroy);
     struct liars_server* server = seat->server;
+    seat_destroy_keyboards(seat);
 
     wl_list_remove(&seat->request_cursor.link);
     wl_list_remove(&seat->pointer_focus_change.link);
@@ -259,8 +272,10 @@ void seat_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&seat->touch_grab_begin.link);
     wl_list_remove(&seat->touch_grab_end.link);
 
-    pointer_constraint_deactivate(seat->pointer_constraints);
-    free(seat->pointer_constraints);
+    wl_list_remove(&seat->request_set_primary_selection.link);
+    wl_list_remove(&seat->destroy.link);
+
+    pointer_constraints_destroy(seat->pointer_constraints);
     free(seat);
 
     server->seat = NULL;

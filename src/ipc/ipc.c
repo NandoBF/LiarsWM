@@ -63,5 +63,6 @@ struct ipc_server* ipc_server_create(struct liars_server* server) {
 }
 
 void ipc_server_destroy(struct ipc_server* ipc) {
-    // TODO:
+    close(ipc->socket_fd);
+    free(ipc);
 }

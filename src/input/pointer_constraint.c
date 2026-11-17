@@ -8,6 +8,13 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 
+// sorry about the name
+void pointer_constraints_destroy(struct pointer_constraints* pc) {
+    pointer_constraint_deactivate(pc);
+    wl_list_remove(&pc->new_constraint.link);
+    free(pc);
+}
+
 static void warp_to_hint(struct pointer_constraints* pc,
                          struct wlr_pointer_constraint_v1* c) {
 

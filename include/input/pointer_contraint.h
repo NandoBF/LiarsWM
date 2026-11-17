@@ -23,3 +23,5 @@ void pointer_constraint_set_focus(struct pointer_constraints* pc,
 
 void pointer_constraint_deactivate(struct pointer_constraints* pc);
 struct pointer_constraints* create_pointer_constraints(struct liars_seat* seat);
+
+void pointer_constraints_destroy(struct pointer_constraints* pc);

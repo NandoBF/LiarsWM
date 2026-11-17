@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
     config_do_execs_once(&server, server.config);
     server_run(&server);
 
-    ipc_server_destroy(server.ipc_server); 
+    server_cleanup(&server);
+    printf("Graceful exit\n");
     return 0;
 }

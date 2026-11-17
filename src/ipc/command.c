@@ -13,6 +13,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -214,7 +215,13 @@ void command_workspace_reparent(struct liars_server* server,
     }
 }
 
+void command_exit(struct liars_server* server, const char* command,
+                  int client_fd) {
+    wl_display_terminate(server->wl_display);
+}
+
 static const struct command_def commands[] = {
+    {"exit", command_exit},
     {"spawn", command_spawn},
     {"workspace", command_to_column},
     {"close", command_close_focused},
