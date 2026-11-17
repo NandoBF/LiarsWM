@@ -1,5 +1,6 @@
 #include "config.h"
 #include "input/keybind.h"
+#include "ipc/command.h"
 #include "ipc/parser.h"
 #include "tomlc17.h"
 #include "wlr/util/log.h"
@@ -89,6 +90,59 @@ static void load_keybinds(struct config* c, toml_datum_t root) {
     wlr_log(WLR_INFO, "Loaded %d keybinds", c->keybind_num);
 }
 
+static void load_execs(struct config* c, toml_datum_t root) {
+    toml_datum_t execs = toml_get(root, "exec");
+
+    if (execs.type != TOML_ARRAY) {
+        wlr_log(WLR_DEBUG, "Incorrect type for exec toml entry");
+        return;
+    }
+    if (execs.u.arr.size <= 0) {
+        wlr_log(WLR_ERROR, "Invalid sized exec array: %d", execs.u.arr.size);
+        return;
+    }
+
+    c->execs = calloc(execs.u.arr.size, sizeof(*c->execs));
+    for (int i = 0; i < execs.u.arr.size; i++) {
+        toml_datum_t e = execs.u.arr.elem[i];
+        const char* command = toml_get(e, "command").u.s;
+        if (!command) {
+            wlr_log(WLR_ERROR, "Invalid exec when loading config");
+            continue;
+        }
+        c->execs[c->execs_count] = strdup(command);
+        c->execs_count++;
+    }
+    wlr_log(WLR_INFO, "Loaded %d execs", c->execs_count);
+}
+
+static void load_auto_execs(struct config* c, toml_datum_t root) {
+    toml_datum_t execs_once = toml_get(root, "exec-once");
+
+    if (execs_once.type != TOML_ARRAY) {
+        wlr_log(WLR_DEBUG, "Incorrect type for exec-once toml entry");
+        return;
+    }
+    if (execs_once.u.arr.size <= 0) {
+        wlr_log(WLR_ERROR, "Invalid sized exec-once array: %d",
+                execs_once.u.arr.size);
+        return;
+    }
+
+    c->execs_once = calloc(execs_once.u.arr.size, sizeof(*c->execs_once));
+    for (int i = 0; i < execs_once.u.arr.size; i++) {
+        toml_datum_t e = execs_once.u.arr.elem[i];
+        const char* command = toml_get(e, "command").u.s;
+        if (!command) {
+            wlr_log(WLR_ERROR, "Invalid exec when loading config");
+            continue;
+        }
+        c->execs_once[c->execs_once_count] = strdup(command);
+        c->execs_once_count++;
+    }
+    wlr_log(WLR_INFO, "Loaded %d exec-once's", c->execs_once_count);
+}
+
 void config_destroy(struct config* config) {
     free(config->file_path);
 
@@ -98,9 +152,32 @@ void config_destroy(struct config* config) {
         if (config->keybinds[i].args)
             free(config->keybinds[i].args);
     }
+    for (int i = 0; i < config->execs_count; i++) {
+        free(config->execs[i]);
+    }
+    for (int i = 0; i < config->execs_once_count; i++) {
+        free(config->execs_once[i]);
+    }
+    if (config->execs)
+        free(config->execs);
+    if (config->execs_once)
+        free(config->execs_once);
+
     free(config->keybinds);
 
     free(config);
+}
+
+void config_do_execs(struct liars_server* server, struct config* c) {
+    for (int i = 0; i < c->execs_count; i++) {
+        command_spawn(server, c->execs[i], -1);
+    }
+}
+
+void config_do_execs_once(struct liars_server* server, struct config* c) {
+    for (int i = 0; i < c->execs_once_count; i++) {
+        command_spawn(server, c->execs_once[i], -1);
+    }
 }
 
 struct config* load_config(const char* config_path) {
@@ -134,6 +211,8 @@ struct config* load_config(const char* config_path) {
     }
 
     load_keybinds(c, result.toptab);
+    load_execs(c, result.toptab);
+    load_auto_execs(c, result.toptab);
 
     wlr_log(WLR_INFO, "Got inner gap: %d", c->inner_gap);
 

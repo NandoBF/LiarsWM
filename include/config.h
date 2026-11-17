@@ -22,10 +22,18 @@ struct config {
     struct liars_keybind* keybinds;
     int keybind_num;
 
+    char** execs;
+    int execs_count;
+
+    char** execs_once;
+    int execs_once_count;
+
     int interactive_modifier;
 
     time_t last_modified_at;
 };
 
 struct config* load_config(const char* config_path);
+void config_do_execs(struct liars_server* server, struct config* c);
+void config_do_execs_once(struct liars_server* server, struct config* c);
 void config_destroy(struct config* config);

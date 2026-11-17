@@ -1,5 +1,8 @@
-[general]
+[[exec-once]]
+command = "waybar"
 
+
+[general]
 
 [general.appearance]
 inner_gaps = 3

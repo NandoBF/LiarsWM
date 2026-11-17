@@ -30,5 +30,8 @@ struct alias {
 
 const char* handle_command_input(struct liars_server* server, const char* cmd,
                                  int client_fd);
+void command_spawn(struct liars_server* server, const char* command,
+                   int client_fd);
+
 void execute_keybind(struct liars_server* server,
                      const struct liars_keybind* bind);

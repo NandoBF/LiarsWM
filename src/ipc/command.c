@@ -146,6 +146,7 @@ void command_reload_config(struct liars_server* server, const char* command,
     if (new_conf) {
         config_destroy(server->config);
         server->config = new_conf;
+        config_do_execs(server, new_conf);
     }
 }
 
