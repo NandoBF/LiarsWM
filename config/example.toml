@@ -4,7 +4,10 @@
 [general.appearance]
 inner_gaps = 3
 outer_gaps = 5
-border_width = 5
+border_width = 3
+
+[general.binds]
+interactive_modifier = "Super"
 
 [[keybind]]
 keys = "Super+Return"
@@ -61,6 +64,53 @@ args = "0"
 keys = "Super+End"
 action = "level"
 args = "9"
+
+[[keybind]]
+keys = "Super+1"
+action = "workspace"
+args = "1"
+
+[[keybind]]
+keys = "Super+2"
+action = "workspace"
+args = "2"
+[[keybind]]
+keys = "Super+3"
+action = "workspace"
+args = "3"
+[[keybind]]
+keys = "Super+4"
+action = "workspace"
+args = "4"
+[[keybind]]
+keys = "Super+5"
+action = "workspace"
+args = "5"
+[[keybind]]
+keys = "Super+6"
+action = "workspace"
+args = "6"
+[[keybind]]
+keys = "Super+7"
+action = "workspace"
+args = "7"
+[[keybind]]
+keys = "Super+8"
+action = "workspace"
+args = "8"
+[[keybind]]
+keys = "Super+9"
+action = "workspace"
+args = "9"
+[[keybind]]
+keys = "Super+0"
+action = "workspace"
+args = "0"
+
+[[keybind]]
+keys = "Super+d"
+action = "workspace"
+args = "d"
 
 [[keybind]]
 keys = "Super+Space"

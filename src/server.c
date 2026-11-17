@@ -289,6 +289,10 @@ int init_liar_server(struct liars_server* server,
         wlr_compositor_create(server->wl_display, 5, server->renderer);
     wlr_subcompositor_create(server->wl_display);
     wlr_data_device_manager_create(server->wl_display);
+    server->data_control_manager =
+        wlr_data_control_manager_v1_create(server->wl_display);
+    server->ext_data_control_manager =
+        wlr_ext_data_control_manager_v1_create(server->wl_display, 1);
 
     wl_list_init(&server->monitors);
     wl_list_init(&server->columns);

@@ -9,7 +9,9 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_ext_data_control_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
@@ -62,6 +64,9 @@ struct liars_server {
     struct wl_listener new_view_decoration;
 
     struct wlr_xdg_output_manager_v1* xdg_output_manager;
+
+    struct wlr_data_control_manager_v1* data_control_manager;
+    struct wlr_ext_data_control_manager_v1* ext_data_control_manager;
 
     struct wlr_xdg_activation_v1* xdg_activation;
     struct wl_listener activation_request;

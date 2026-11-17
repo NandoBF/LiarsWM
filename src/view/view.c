@@ -121,6 +121,7 @@ void view_borders_set_enabled(struct view* view, bool enabled) {
     }
 }
 
+// FIX: Window size and position doesnt seem correct top and bottom?
 void view_set_borders(struct view* v, int w, int h) {
     if (w < 0)
         w = 0;
@@ -150,11 +151,8 @@ void view_map(struct view* view) {
     bool activate = view->pending_activate;
     view->pending_activate = false;
 
-    if (activate) {
-        // default map policy
-        if (view->server->active_workspace == view->workspace) {
-            focus_view(view);
-        }
+    if (activate || view->server->active_workspace == view->workspace) {
+        focus_view(view);
     } else {
         // maybe mark it urgent in the future?
     }
