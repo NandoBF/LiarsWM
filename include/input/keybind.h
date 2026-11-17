@@ -24,6 +24,6 @@ struct keybind {
 struct liars_keybind {
     uint32_t modifiers;
     xkb_keysym_t keysym;
-    const char* action;
-    const char* args;
+    char* action;
+    char* args;
 };

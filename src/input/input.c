@@ -360,13 +360,13 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
         xkb_keysym_t sym = xkb_keysym_to_lower(syms[i]);
         for (int j = 0; j < config->keybind_num; j++) {
             xkb_keysym_t bind_sym =
-                xkb_keysym_to_lower(config->keybinds[j]->keysym);
-            if (masked_modifiers == config->keybinds[j]->modifiers &&
+                xkb_keysym_to_lower(config->keybinds[j].keysym);
+            if (masked_modifiers == config->keybinds[j].modifiers &&
                 sym == bind_sym &&
                 event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 
                 wlr_log(WLR_DEBUG, "Keybinding matched!");
-                execute_keybind(server, config->keybinds[j]);
+                execute_keybind(server, &config->keybinds[j]);
                 handled = true;
             }
         }

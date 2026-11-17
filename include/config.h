@@ -19,7 +19,7 @@ struct config {
     int inner_gap;
     int outer_gap;
 
-    struct liars_keybind** keybinds;
+    struct liars_keybind* keybinds;
     int keybind_num;
 
     int interactive_modifier;

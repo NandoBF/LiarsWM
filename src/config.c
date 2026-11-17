@@ -4,9 +4,11 @@
 #include "tomlc17.h"
 #include "wlr/util/log.h"
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 // TODO: Refactor config struct access?
+// PERF: Lookup tables for actions?
 
 #define INNER_GAPS "general.appearance.inner_gaps"
 #define OUTER_GAPS "general.appearance.outer_gaps"
@@ -51,6 +53,12 @@ static void load_keybinds(struct config* c, toml_datum_t root) {
         wlr_log(WLR_ERROR, "Incorrect type for keybind toml entry");
         return;
     }
+    if (keybinds.u.arr.size <= 0) {
+        wlr_log(WLR_ERROR, "Invalid sized keybinds array");
+        return;
+    }
+
+    c->keybinds = calloc(keybinds.u.arr.size, sizeof(*c->keybinds));
 
     for (int i = 0; i < keybinds.u.arr.size; i++) {
         toml_datum_t kb = keybinds.u.arr.elem[i];
@@ -66,15 +74,16 @@ static void load_keybinds(struct config* c, toml_datum_t root) {
             wlr_log(WLR_INFO, "Got invalid key combination: %s", keys);
             continue;
         }
-        struct liars_keybind* k = calloc(1, sizeof(*k));
+        struct liars_keybind* k = &c->keybinds[c->keybind_num];
         k->modifiers = modifier;
         k->keysym = keysym;
-        k->action = command;
-        k->args = args;
-        c->keybinds[c->keybind_num] = k;
+        if (command) {
+            k->action = strdup(command);
+        }
+        if (args) {
+            k->args = strdup(args);
+        }
         c->keybind_num++;
-        // wlr_log(WLR_INFO, "Got keys: %s (%d), action: %s, command: %s", keys,
-        // modifier, args,command);
     }
 
     wlr_log(WLR_INFO, "Loaded %d keybinds", c->keybind_num);
@@ -82,31 +91,37 @@ static void load_keybinds(struct config* c, toml_datum_t root) {
 
 void config_destroy(struct config* config) {
     free(config->file_path);
+
+    for (int i = 0; i < config->keybind_num; i++) {
+        if (config->keybinds[i].action)
+            free(config->keybinds[i].action);
+        if (config->keybinds[i].args)
+            free(config->keybinds[i].args);
+    }
     free(config->keybinds);
 
     free(config);
 }
 
 struct config* load_config(const char* config_path) {
-    struct config* c = calloc(1, sizeof(*c));
-    c->file_path = strdup(config_path);
-    // FIX:
-    c->keybinds = calloc(20, sizeof(struct liars_keybind*));
-
     struct stat file_stat;
     int err = stat(config_path, &file_stat);
     if (err != 0) {
         wlr_log(WLR_DEBUG, "Stat error");
-        return false;
+        return NULL;
     }
-    c->last_modified_at = file_stat.st_mtim.tv_sec;
 
     toml_result_t result = toml_parse_file_ex(config_path);
 
     if (!result.ok) {
         wlr_log(WLR_ERROR, "Error loading config from: %s", config_path);
+        toml_free(result);
         return NULL;
     }
+
+    struct config* c = calloc(1, sizeof(*c));
+    c->file_path = strdup(config_path);
+    c->last_modified_at = file_stat.st_mtim.tv_sec;
 
     c->inner_gap = read_int(result, INNER_GAPS);
     c->outer_gap = read_int(result, OUTER_GAPS);
@@ -122,7 +137,7 @@ struct config* load_config(const char* config_path) {
 
     wlr_log(WLR_INFO, "Got inner gap: %d", c->inner_gap);
 
-    // toml_free(result); FIX: For some reason keybinds dont work with this
+    toml_free(result);
     return c;
 }
 
