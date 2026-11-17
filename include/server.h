@@ -68,6 +68,8 @@ struct liars_server {
     struct wlr_data_control_manager_v1* data_control_manager;
     struct wlr_ext_data_control_manager_v1* ext_data_control_manager;
 
+    struct wlr_screencopy_manager_v1* screencopy_manager;
+
     struct wlr_xdg_activation_v1* xdg_activation;
     struct wl_listener activation_request;
     struct wl_listener activation_new_token;

@@ -18,6 +18,7 @@
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/util/edges.h>
 #include <wlr/util/log.h>
 #include <wlr/xwayland.h>
@@ -354,6 +355,13 @@ int init_liar_server(struct liars_server* server,
 
     server->xdg_output_manager = wlr_xdg_output_manager_v1_create(
         server->wl_display, server->output_layout);
+
+    server->screencopy_manager =
+        wlr_screencopy_manager_v1_create(server->wl_display);
+    if (!server->screencopy_manager) {
+        wlr_log(WLR_ERROR, "Failed to create screencopy_manager");
+        return 1;
+    }
 
     // Seat
     struct liars_seat* seat = create_seat(server);
