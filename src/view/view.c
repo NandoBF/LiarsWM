@@ -121,7 +121,6 @@ void view_borders_set_enabled(struct view* view, bool enabled) {
     }
 }
 
-// FIX: Window size and position doesnt seem correct top and bottom?
 void view_set_borders(struct view* v, int w, int h) {
     if (w < 0)
         w = 0;

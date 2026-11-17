@@ -19,10 +19,11 @@ void workspace_arrange(struct workspace* ws) {
     int height = monitor->usable.height;
 
     int edge_offset = config->outer_gap - (config->inner_gap / 2);
+    int extra = config->inner_gap % 2;
 
     ws->layout->arrange(ws, x + edge_offset, y + edge_offset,
-                        width - (2 * edge_offset), height - (2 * edge_offset),
-                        config->inner_gap);
+                        width - (2 * edge_offset) + extra,
+                        height - (2 * edge_offset) + extra, config->inner_gap);
     ws->needs_arrange = false;
 }
 
