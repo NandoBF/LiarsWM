@@ -19,7 +19,9 @@ int main(int argc, char* argv[]) {
 
 
     struct liars_server server = {0};
-    init_liar_server(&server, WLR_DEBUG, config_file_path);
+    if (init_liar_server(&server, WLR_DEBUG, config_file_path) != 0) {
+        return 1;
+    }
     config_do_execs(&server, server.config);
     config_do_execs_once(&server, server.config);
     server_run(&server);
