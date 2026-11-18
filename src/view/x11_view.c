@@ -157,10 +157,27 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
 
 static void x11_view_request_configure(struct wl_listener* listener,
                                        void* data) {
-    // TODO:
     struct x11_view* x11_v =
         wl_container_of(listener, x11_v, request_configure);
+    struct view* view = &x11_v->base;
     struct wlr_xwayland_surface_configure_event* event = data;
+
+    if (!view->mapped || !view->scene_tree) {
+        wlr_xwayland_surface_configure(x11_v->xsurface, event->x, event->y,
+                                       event->width, event->height);
+        return;
+    }
+
+    if (!view->is_floating || view->is_maximized || view->is_fullscreen) {
+        wlr_xwayland_surface_configure(
+            x11_v->xsurface, view->scene_tree->node.x, view->scene_tree->node.y,
+            x11_v->xsurface->width, x11_v->xsurface->height);
+        return;
+    }
+
+    wlr_scene_node_set_position(&view->scene_tree->node, event->x, event->y);
+    int borders = 2 * view->server->config->border_width;
+    view->impl->set_size(view, event->width + borders, event->height + borders);
 }
 
 static void x11_view_request_maximize(struct wl_listener* listener,

@@ -6,7 +6,6 @@
 
 #define DEFAULT_CONFIG_LOC "./config/nested.toml"
 
-// TODO: Respect X11 configure requests
 // TODO: Keyboard focus navigation
 // TODO: Session lock?
 // TODO: Fix primary selected (low priority I dont use it)
