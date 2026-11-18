@@ -1,3 +1,6 @@
+[[exec-once]]
+command = "waybar"
+
 [general]
 
 
@@ -15,7 +18,7 @@ action = "spawn"
 args = "kitty"
 
 [[keybind]]
-keys = "Super+Shift+C"
+keys = "Super+Q"
 action = "close"
 
 [[keybind]]

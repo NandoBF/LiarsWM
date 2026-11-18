@@ -131,18 +131,23 @@ static void xdg_toplevel_request_maximize(struct wl_listener* listener,
                                           void* data) {
     struct view* view = wl_container_of(listener, view, request_maximize);
     struct xdg_view* xdg_view = XDG_VIEW(view);
-    if (xdg_view->toplevel->base->initialized) {
-        wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
-    }
+    (void)data;
+    if (!xdg_view->toplevel->base->initialized)
+        return;
+
+    view_set_maximized(view, xdg_view->toplevel->requested.maximized);
 }
 
 static void xdg_toplevel_request_fullscreen(struct wl_listener* listener,
                                             void* data) {
     struct view* view = wl_container_of(listener, view, request_fullscreen);
     struct xdg_view* xdg_view = XDG_VIEW(view);
-    if (xdg_view->toplevel->base->initialized) {
-        wlr_xdg_surface_schedule_configure(xdg_view->toplevel->base);
-    }
+    (void)data;
+    if (!xdg_view->toplevel->base->initialized)
+        return;
+
+    xdg_view->base.impl->set_fullscreen(
+        view, xdg_view->toplevel->requested.fullscreen);
 }
 
 // IMPL
@@ -187,6 +192,11 @@ static bool xdg_view_want_fullscreen(struct view* v) {
     return xv->toplevel->requested.fullscreen == true;
 }
 
+static bool xdg_view_want_maximized(struct view* v) {
+    struct xdg_view* xv = XDG_VIEW(v);
+    return xv->toplevel->requested.maximized == true;
+}
+
 static struct wlr_surface* xdg_view_get_surface(struct view* v) {
     struct xdg_view* xv = XDG_VIEW(v);
     return xv->toplevel->base->surface;
@@ -197,12 +207,17 @@ static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
 
     v->is_fullscreen = fullscreen;
     wlr_xdg_toplevel_set_fullscreen(xdg_view->toplevel, fullscreen);
+    view_set_fullscreen(v, fullscreen);
     if (fullscreen) {
         struct monitor* monitor = v->workspace->col->monitor;
         xdg_view->base.impl->set_size(v, monitor->output->width,
                                       monitor->output->height);
     }
-    view_set_fullscreen(v, fullscreen);
+}
+
+static void xdg_view_set_maximized(struct view* v, bool maximized) {
+    struct xdg_view* xdg_view = XDG_VIEW(v);
+    wlr_xdg_toplevel_set_maximized(xdg_view->toplevel, maximized);
 }
 
 static struct wlr_scene* xdg_view_create_capture_scene(struct view* v) {
@@ -232,8 +247,10 @@ static const struct view_impl xdg_view_impl = {
     .get_title = xdg_view_get_title,
     .get_app_id = xdg_view_get_app_id,
     .want_fullscreen = xdg_view_want_fullscreen,
+    .want_maximized = xdg_view_want_maximized,
     .get_surface = xdg_view_get_surface,
     .set_fullscreen = xdg_view_set_fullscreen,
+    .set_maximized = xdg_view_set_maximized,
     .create_capture_scene = xdg_view_create_capture_scene,
 };
 

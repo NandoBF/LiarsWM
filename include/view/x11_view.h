@@ -10,6 +10,8 @@ struct x11_view {
     struct wlr_scene_tree* surface_tree;
 
     struct wl_listener request_configure;
+    struct wl_listener request_maximize;
+    struct wl_listener request_fullscreen;
     struct wl_listener associate;
     struct wl_listener dissociate;
     struct wl_listener grab_focus;

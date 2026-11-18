@@ -43,6 +43,8 @@ struct view {
     struct wlr_scene_rect* borders[4];
     bool is_fullscreen;
     bool is_floating;
+    bool is_maximized;
+    struct wlr_box saved_geometry; // geometry before maximize
 
     struct wlr_ext_foreign_toplevel_handle_v1* toplevel_handle;
     struct wlr_scene* capture_scene;
@@ -59,8 +61,10 @@ struct view_impl {
     const char* (*get_title)(struct view* v);
     const char* (*get_app_id)(struct view* v);
     bool (*want_fullscreen)(struct view* v);
+    bool (*want_maximized)(struct view* v);
     struct wlr_surface* (*get_surface)(struct view* v);
     void (*set_fullscreen)(struct view* v, bool fullscreen);
+    void (*set_maximized)(struct view* v, bool maximized);
     struct wlr_scene* (*create_capture_scene)(struct view* v);
 };
 
@@ -82,3 +86,4 @@ void view_release_capture(struct view* view);
 
 void view_set_floating(struct view* view, bool floating);
 void view_set_fullscreen(struct view* view, bool fullscreen);
+void view_set_maximized(struct view* view, bool maximized);

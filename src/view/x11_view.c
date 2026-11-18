@@ -144,6 +144,8 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&x11_v->associate.link);
     wl_list_remove(&x11_v->dissociate.link);
     wl_list_remove(&x11_v->request_configure.link);
+    wl_list_remove(&x11_v->request_maximize.link);
+    wl_list_remove(&x11_v->request_fullscreen.link);
     wl_list_remove(&x11_v->grab_focus.link);
     wl_list_remove(&view->set_title.link);
     wl_list_remove(&view->destroy.link);
@@ -159,6 +161,21 @@ static void x11_view_request_configure(struct wl_listener* listener,
     struct x11_view* x11_v =
         wl_container_of(listener, x11_v, request_configure);
     struct wlr_xwayland_surface_configure_event* event = data;
+}
+
+static void x11_view_request_maximize(struct wl_listener* listener,
+                                      void* data) {
+    struct x11_view* xv = wl_container_of(listener, xv, request_maximize);
+    (void)data;
+    view_set_maximized(&xv->base, xv->xsurface->maximized_horz &&
+                                      xv->xsurface->maximized_vert);
+}
+
+static void x11_view_request_fullscreen(struct wl_listener* listener,
+                                        void* data) {
+    struct x11_view* xv = wl_container_of(listener, xv, request_fullscreen);
+    (void)data;
+    xv->base.impl->set_fullscreen(&xv->base, xv->xsurface->fullscreen);
 }
 
 static void x11_view_get_geometry(struct view* v, struct wlr_box* box) {
@@ -227,16 +244,26 @@ static bool x11_view_want_fullscreen(struct view* v) {
     return x11_v->xsurface->fullscreen;
 }
 
+static bool x11_view_want_maximized(struct view* v) {
+    struct x11_view* x11_v = X11_VIEW(v);
+    return x11_v->xsurface->maximized_horz && x11_v->xsurface->maximized_vert;
+}
+
 static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
     struct x11_view* x11_view = X11_VIEW(v);
     v->is_fullscreen = fullscreen;
     wlr_xwayland_surface_set_fullscreen(x11_view->xsurface, fullscreen);
+    view_set_fullscreen(v, fullscreen);
     if (fullscreen) {
         struct monitor* monitor = v->workspace->col->monitor;
         x11_view->base.impl->set_size(v, monitor->output->width,
                                       monitor->output->height);
     }
-    view_set_fullscreen(v, fullscreen);
+}
+
+static void x11_view_set_maximized(struct view* v, bool maximized) {
+    struct x11_view* x11_v = X11_VIEW(v);
+    wlr_xwayland_surface_set_maximized(x11_v->xsurface, maximized, maximized);
 }
 
 static struct wlr_scene* x11_view_create_capture_scene(struct view* v) {
@@ -266,8 +293,10 @@ static const struct view_impl x11_view_impl = {
     .get_title = x11_view_get_title,
     .get_app_id = x11_view_get_app_id,
     .want_fullscreen = x11_view_want_fullscreen,
+    .want_maximized = x11_view_want_maximized,
     .get_surface = x11_view_get_surface,
     .set_fullscreen = x11_view_set_fullscreen,
+    .set_maximized = x11_view_set_maximized,
     .create_capture_scene = x11_view_create_capture_scene};
 
 static void x11_view_grab_focus(struct wl_listener* listener, void* data) {
@@ -319,6 +348,13 @@ void server_new_xwayland_surface(struct wl_listener* listener, void* data) {
 
     xv->request_configure.notify = x11_view_request_configure;
     wl_signal_add(&xsurface->events.request_configure, &xv->request_configure);
+
+    xv->request_maximize.notify = x11_view_request_maximize;
+    wl_signal_add(&xsurface->events.request_maximize, &xv->request_maximize);
+
+    xv->request_fullscreen.notify = x11_view_request_fullscreen;
+    wl_signal_add(&xsurface->events.request_fullscreen,
+                  &xv->request_fullscreen);
 
     xv->grab_focus.notify = x11_view_grab_focus;
     wl_signal_add(&xsurface->events.grab_focus, &xv->grab_focus);

@@ -159,6 +159,12 @@ void view_map(struct view* view) {
         }
     }
 
+    if (view->impl->want_fullscreen(view)) {
+        view->impl->set_fullscreen(view, true);
+    } else if (view->impl->want_maximized(view)) {
+        view_set_maximized(view, true);
+    }
+
     bool activate = view->pending_activate;
     view->pending_activate = false;
 
@@ -281,6 +287,9 @@ void view_set_floating(struct view* view, bool floating) {
 }
 
 void view_set_fullscreen(struct view* view, bool fullscreen) {
+    if (fullscreen && view->is_maximized)
+        view_set_maximized(view, false);
+
     if (view->is_floating)
         view_set_floating(view, false);
 
@@ -294,4 +303,46 @@ void view_set_fullscreen(struct view* view, bool fullscreen) {
     }
     view_borders_set_enabled(view, !fullscreen);
     // focus_view_under_cursor(view->server); // FIX:
+}
+
+void view_set_maximized(struct view* view, bool maximized) {
+    if (view->is_maximized == maximized)
+        return;
+
+    if (maximized) {
+        if (view->is_fullscreen)
+            view->impl->set_fullscreen(view, false);
+
+        view->saved_geometry.x = view->scene_tree->node.x;
+        view->saved_geometry.y = view->scene_tree->node.y;
+        struct wlr_box geo;
+        view->impl->get_geometry(view, &geo);
+
+        struct config* config = view->server->config;
+        int bw = view->is_fullscreen ? 0 : 2 * config->border_width;
+        view->saved_geometry.width = geo.width + bw;
+        view->saved_geometry.height = geo.height + bw;
+
+        if (!view->is_floating)
+            view_set_floating(view, true);
+
+        view->is_maximized = true;
+
+        struct monitor* monitor = view_get_monitor(view);
+        wlr_scene_node_set_position(&view->scene_tree->node, monitor->usable.x,
+                                    monitor->usable.y);
+        view->impl->set_size(view, monitor->usable.width,
+                             monitor->usable.height);
+    } else {
+        view->is_maximized = false;
+
+        wlr_scene_node_set_position(&view->scene_tree->node,
+                                    view->saved_geometry.x,
+                                    view->saved_geometry.y);
+        view->impl->set_size(view, view->saved_geometry.width,
+                             view->saved_geometry.height);
+    }
+
+    if (view->impl->set_maximized)
+        view->impl->set_maximized(view, maximized);
 }

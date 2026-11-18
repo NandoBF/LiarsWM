@@ -6,8 +6,6 @@
 
 #define DEFAULT_CONFIG_LOC "./config/nested.toml"
 
-// TODO: Test screensharing
-// TODO: Respect request maximize and request fullscreen for xdg views
 // TODO: Respect X11 configure requests
 // TODO: Keyboard focus navigation
 // TODO: Session lock?
