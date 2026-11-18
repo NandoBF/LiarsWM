@@ -3,6 +3,7 @@
 #include "input/input.h"
 #include "input/pointer_contraint.h"
 #include "monitor.h"
+#include "server.h"
 #include "windows/layout.h"
 #include "windows/workspace.h"
 #include <wayland-util.h>
@@ -147,6 +148,17 @@ void view_map(struct view* view) {
     map_borders(view);
     workspace_spawn(get_active_workspace(view->server), view);
 
+    if (!view->toplevel_handle && view->server->toplevel_list) {
+        struct wlr_ext_foreign_toplevel_handle_v1_state state = {
+            .title = view->impl->get_title(view),
+            .app_id = view->impl->get_app_id(view)};
+        view->toplevel_handle = wlr_ext_foreign_toplevel_handle_v1_create(
+            view->server->toplevel_list, &state);
+        if (view->toplevel_handle) {
+            view->toplevel_handle->data = view;
+        }
+    }
+
     bool activate = view->pending_activate;
     view->pending_activate = false;
 
@@ -157,6 +169,87 @@ void view_map(struct view* view) {
     }
 }
 
+void view_set_title(struct wl_listener* listener, void* data) {
+    struct view* view = wl_container_of(listener, view, set_title);
+    struct wlr_ext_foreign_toplevel_handle_v1* handle = view->toplevel_handle;
+    (void)data;
+    if (!handle)
+        return;
+
+    struct wlr_ext_foreign_toplevel_handle_v1_state new_state = {
+        .title = view->impl->get_title(view) ? view->impl->get_title(view) : "",
+        .app_id = handle->app_id};
+
+    wlr_ext_foreign_toplevel_handle_v1_update_state(handle, &new_state);
+}
+
+void view_set_app_id(struct wl_listener* listener, void* data) {
+    struct view* view = wl_container_of(listener, view, set_app_id);
+    struct wlr_ext_foreign_toplevel_handle_v1* handle = view->toplevel_handle;
+    (void)data;
+    if (!handle)
+        return;
+
+    struct wlr_ext_foreign_toplevel_handle_v1_state new_state = {
+        .title = handle->title,
+        .app_id =
+            view->impl->get_app_id(view) ? view->impl->get_app_id(view) : ""};
+
+    wlr_ext_foreign_toplevel_handle_v1_update_state(handle, &new_state);
+}
+
+static void view_capture_source_destroy(struct wl_listener* listener,
+                                        void* data) {
+    struct view* view = wl_container_of(listener, view, capture_source_destroy);
+    (void)data;
+
+    wl_list_remove(&view->capture_source_destroy.link);
+    wl_list_init(&view->capture_source_destroy.link);
+    view->capture_source = NULL;
+}
+
+bool view_ensure_capture_source(struct view* view) {
+    if (view->capture_source)
+        return true;
+
+    struct liars_server* server = view->server;
+    if (!server->renderer || !server->allocator)
+        return false;
+
+    if (!view->capture_scene) {
+        view->capture_scene = view->impl->create_capture_scene(view);
+        if (!view->capture_scene)
+            return false;
+    }
+
+    view->capture_source =
+        wlr_ext_image_capture_source_v1_create_with_scene_node(
+            &view->capture_scene->tree.node, server->event_loop,
+            server->allocator, server->renderer);
+    if (!view->capture_source) {
+        wlr_log(WLR_ERROR, "Failed to create window capture source");
+        return false;
+    }
+
+    view->capture_source_destroy.notify = view_capture_source_destroy;
+    wl_signal_add(&view->capture_source->events.destroy,
+                  &view->capture_source_destroy);
+    return true;
+}
+
+void view_release_capture(struct view* view) {
+    if (view->capture_scene) {
+        wlr_scene_node_destroy(&view->capture_scene->tree.node);
+        view->capture_scene = NULL;
+    }
+    view->capture_source = NULL;
+
+    if (view->toplevel_handle) {
+        wlr_ext_foreign_toplevel_handle_v1_destroy(view->toplevel_handle);
+        view->toplevel_handle = NULL;
+    }
+}
+
 // This does not free the view. It must be freed after
 // Common destroy behavior for all views
 // All behavior in this function must be safe to run by all view types
@@ -164,6 +257,7 @@ void view_destroy(struct view* view) {
     if (view->is_fullscreen) {
         workspace_unset_fullscreen(view->workspace, view);
     }
+    view_release_capture(view);
     focus_view_under_cursor(view->server);
 }
 

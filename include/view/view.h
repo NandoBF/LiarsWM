@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
@@ -41,6 +43,11 @@ struct view {
     struct wlr_scene_rect* borders[4];
     bool is_fullscreen;
     bool is_floating;
+
+    struct wlr_ext_foreign_toplevel_handle_v1* toplevel_handle;
+    struct wlr_scene* capture_scene;
+    struct wlr_ext_image_capture_source_v1* capture_source;
+    struct wl_listener capture_source_destroy;
 };
 
 struct view_impl {
@@ -54,6 +61,7 @@ struct view_impl {
     bool (*want_fullscreen)(struct view* v);
     struct wlr_surface* (*get_surface)(struct view* v);
     void (*set_fullscreen)(struct view* v, bool fullscreen);
+    struct wlr_scene* (*create_capture_scene)(struct view* v);
 };
 
 struct view* view_from_activation_surface(struct wlr_surface* surface);
@@ -66,6 +74,11 @@ void view_set_borders(struct view* v, int w, int h);
 void view_map(struct view* view);
 void view_destroy(struct view* view);
 void view_borders_set_enabled(struct view* view, bool enabled);
+void view_set_title(struct wl_listener* listener, void* data);
+void view_set_app_id(struct wl_listener* listener, void* data);
+
+bool view_ensure_capture_source(struct view* view);
+void view_release_capture(struct view* view);
 
 void view_set_floating(struct view* view, bool floating);
 void view_set_fullscreen(struct view* view, bool fullscreen);

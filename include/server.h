@@ -5,6 +5,7 @@
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
 #include <wlr/backend.h>
+#include <wlr/interfaces/wlr_ext_image_capture_source_v1.h>
 #include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
@@ -12,6 +13,8 @@
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_ext_data_control_v1.h>
+#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
@@ -69,6 +72,12 @@ struct liars_server {
     struct wlr_ext_data_control_manager_v1* ext_data_control_manager;
 
     struct wlr_screencopy_manager_v1* screencopy_manager;
+    struct wlr_ext_foreign_toplevel_list_v1* toplevel_list;
+    struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1*
+        toplevel_capture;
+    struct wlr_ext_image_copy_capture_manager_v1* copy_capture;
+    struct wlr_ext_output_image_capture_source_manager_v1* output_capture;
+    struct wl_listener toplevel_capture_new_request;
 
     struct wlr_xdg_activation_v1* xdg_activation;
     struct wl_listener activation_request;

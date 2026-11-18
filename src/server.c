@@ -18,6 +18,7 @@
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/util/edges.h>
 #include <wlr/util/log.h>
@@ -258,6 +259,29 @@ static void server_activation_request(struct wl_listener* listener,
     focus_view(view);
 }
 
+static void toplevel_capture_new_request(struct wl_listener* listener,
+                                         void* data) {
+    struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request*
+        request = data;
+    (void)listener;
+
+    struct wlr_ext_foreign_toplevel_handle_v1* handle =
+        request->toplevel_handle;
+    struct view* view = handle ? handle->data : NULL;
+    if (!view || !view->mapped)
+        return;
+
+    if (!view_ensure_capture_source(view)) {
+        wlr_log(WLR_ERROR, "Failed to create capture source for window");
+        return;
+    }
+
+    if (!wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request_accept(
+            request, view->capture_source)) {
+        wlr_log(WLR_ERROR, "Failed to accept window capture request");
+    }
+}
+
 int init_liar_server(struct liars_server* server,
                      enum wlr_log_importance log_level,
                      char* config_file_path) {
@@ -363,6 +387,27 @@ int init_liar_server(struct liars_server* server,
         return 1;
     }
 
+    server->toplevel_list =
+        wlr_ext_foreign_toplevel_list_v1_create(server->wl_display, 1);
+    server->toplevel_capture =
+        wlr_ext_foreign_toplevel_image_capture_source_manager_v1_create(
+            server->wl_display, 1);
+    server->copy_capture =
+        wlr_ext_image_copy_capture_manager_v1_create(server->wl_display, 1);
+    server->output_capture =
+        wlr_ext_output_image_capture_source_manager_v1_create(
+            server->wl_display, 1);
+
+    if (!server->toplevel_list || !server->toplevel_capture ||
+        !server->copy_capture || !server->output_capture) {
+        wlr_log(WLR_ERROR, "Failed to create capture protocol managers");
+        return 1;
+    }
+
+    server->toplevel_capture_new_request.notify = toplevel_capture_new_request;
+    wl_signal_add(&server->toplevel_capture->events.new_request,
+                  &server->toplevel_capture_new_request);
+
     // Seat
     struct liars_seat* seat = create_seat(server);
     server->seat = seat;
@@ -407,6 +452,8 @@ void server_cleanup(struct liars_server* server) {
     wl_list_remove(&server->new_view_decoration.link);
     if (server->xwayland)
         wl_list_remove(&server->new_xwayland_surface.link);
+    if (server->toplevel_capture)
+        wl_list_remove(&server->toplevel_capture_new_request.link);
 
     ipc_server_destroy(server->ipc_server);
     server->ipc_server = NULL;

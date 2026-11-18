@@ -123,6 +123,8 @@ static void x11_view_map(struct wl_listener* listener, void* data) {
 static void x11_view_unmap(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, unmap);
 
+    view->mapped = false;
+
     if (view == view->server->cursor->grabbed_view) {
         reset_cursor_mode(view->server->cursor);
     }
@@ -143,6 +145,7 @@ static void x11_view_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&x11_v->dissociate.link);
     wl_list_remove(&x11_v->request_configure.link);
     wl_list_remove(&x11_v->grab_focus.link);
+    wl_list_remove(&view->set_title.link);
     wl_list_remove(&view->destroy.link);
 
     view_destroy(view);
@@ -236,6 +239,24 @@ static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
     view_set_fullscreen(v, fullscreen);
 }
 
+static struct wlr_scene* x11_view_create_capture_scene(struct view* v) {
+    struct x11_view* x11_view = X11_VIEW(v);
+    if (!x11_view->xsurface || !x11_view->xsurface->surface)
+        return NULL;
+
+    struct wlr_scene* capture_scene = wlr_scene_create();
+    if (!capture_scene)
+        return NULL;
+
+    if (!wlr_scene_surface_create(&capture_scene->tree,
+                                  x11_view->xsurface->surface)) {
+        wlr_scene_node_destroy(&capture_scene->tree.node);
+        return NULL;
+    }
+
+    return capture_scene;
+}
+
 static const struct view_impl x11_view_impl = {
     .get_geometry = x11_view_get_geometry,
     .get_surface_layout_pos = x11_view_get_surface_layout_pos,
@@ -247,7 +268,7 @@ static const struct view_impl x11_view_impl = {
     .want_fullscreen = x11_view_want_fullscreen,
     .get_surface = x11_view_get_surface,
     .set_fullscreen = x11_view_set_fullscreen,
-};
+    .create_capture_scene = x11_view_create_capture_scene};
 
 static void x11_view_grab_focus(struct wl_listener* listener, void* data) {
     struct x11_view* xv = wl_container_of(listener, xv, grab_focus);
@@ -301,6 +322,9 @@ void server_new_xwayland_surface(struct wl_listener* listener, void* data) {
 
     xv->grab_focus.notify = x11_view_grab_focus;
     wl_signal_add(&xsurface->events.grab_focus, &xv->grab_focus);
+
+    xv->base.set_title.notify = view_set_title;
+    wl_signal_add(&xsurface->events.set_title, &xv->base.set_title);
 
     wlr_log(WLR_DEBUG, "Started x11 surface");
 }

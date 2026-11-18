@@ -64,6 +64,8 @@ static void xdg_toplevel_map(struct wl_listener* listener, void* data) {
 static void xdg_toplevel_unmap(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, unmap);
 
+    view->mapped = false;
+
     if (view == view->server->cursor->grabbed_view) {
         reset_cursor_mode(view->server->cursor);
     }
@@ -96,6 +98,8 @@ static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&view->request_resize.link);
     wl_list_remove(&view->request_maximize.link);
     wl_list_remove(&view->request_fullscreen.link);
+    wl_list_remove(&view->set_title.link);
+    wl_list_remove(&view->set_app_id.link);
 
     view_destroy(view);
     wlr_scene_node_destroy(&view->scene_tree->node);
@@ -201,6 +205,24 @@ static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
     view_set_fullscreen(v, fullscreen);
 }
 
+static struct wlr_scene* xdg_view_create_capture_scene(struct view* v) {
+    struct xdg_view* xdg_view = XDG_VIEW(v);
+    if (!xdg_view->toplevel || !xdg_view->toplevel->base)
+        return NULL;
+
+    struct wlr_scene* capture_scene = wlr_scene_create();
+    if (!capture_scene)
+        return NULL;
+
+    if (!wlr_scene_xdg_surface_create(&capture_scene->tree,
+                                      xdg_view->toplevel->base)) {
+        wlr_scene_node_destroy(&capture_scene->tree.node);
+        return NULL;
+    }
+
+    return capture_scene;
+}
+
 static const struct view_impl xdg_view_impl = {
     .get_geometry = xdg_view_get_geometry,
     .get_surface_layout_pos = xdg_view_get_surface_layout_pos,
@@ -212,6 +234,7 @@ static const struct view_impl xdg_view_impl = {
     .want_fullscreen = xdg_view_want_fullscreen,
     .get_surface = xdg_view_get_surface,
     .set_fullscreen = xdg_view_set_fullscreen,
+    .create_capture_scene = xdg_view_create_capture_scene,
 };
 
 //
@@ -260,6 +283,12 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     xv->base.request_fullscreen.notify = xdg_toplevel_request_fullscreen;
     wl_signal_add(&toplevel->events.request_fullscreen,
                   &xv->base.request_fullscreen);
+
+    xv->base.set_title.notify = view_set_title;
+    wl_signal_add(&toplevel->events.set_title, &xv->base.set_title);
+
+    xv->base.set_app_id.notify = view_set_app_id;
+    wl_signal_add(&toplevel->events.set_app_id, &xv->base.set_app_id);
 
     toplevel->base->data = xv;
 }
