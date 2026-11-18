@@ -6,6 +6,15 @@
 
 #define DEFAULT_CONFIG_LOC "./config/nested.toml"
 
+// TODO: Test screensharing
+// TODO: Respect request maximize and request fullscreen for xdg views
+// TODO: Respect X11 configure requests
+// TODO: Keyboard focus navigation
+// TODO: Session lock?
+// TODO: Fix primary selected (low priority I dont use it)
+// TODO: Viewporter for HiDPI apps
+// TODO: Multi monitor support (I cant test this)
+
 int main(int argc, char* argv[]) {
     char* config_file_path = NULL;
     for (int i = 1; i < argc; i++) {
