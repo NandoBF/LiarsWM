@@ -297,8 +297,9 @@ static bool x11_view_want_floating(struct view* v) {
 }
 
 static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
+    if (v->is_fullscreen == fullscreen)
+        return;
     struct x11_view* x11_view = X11_VIEW(v);
-    v->is_fullscreen = fullscreen;
     wlr_xwayland_surface_set_fullscreen(x11_view->xsurface, fullscreen);
     view_set_fullscreen(v, fullscreen);
     if (fullscreen) {

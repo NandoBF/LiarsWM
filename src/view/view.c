@@ -287,6 +287,8 @@ void view_set_floating(struct view* view, bool floating) {
 }
 
 void view_set_fullscreen(struct view* view, bool fullscreen) {
+    if (view->is_fullscreen == fullscreen)
+        return;
     if (fullscreen && view->is_maximized)
         view_set_maximized(view, false);
 

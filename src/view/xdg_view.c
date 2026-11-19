@@ -198,9 +198,10 @@ static struct wlr_surface* xdg_view_get_surface(struct view* v) {
 }
 
 static void xdg_view_set_fullscreen(struct view* v, bool fullscreen) {
+    if (v->is_fullscreen == fullscreen)
+        return;
     struct xdg_view* xdg_view = XDG_VIEW(v);
 
-    v->is_fullscreen = fullscreen;
     wlr_xdg_toplevel_set_fullscreen(xdg_view->toplevel, fullscreen);
     view_set_fullscreen(v, fullscreen);
     if (fullscreen) {
