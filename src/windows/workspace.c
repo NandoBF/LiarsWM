@@ -34,6 +34,17 @@ bool is_column_empty(struct column* col) {
     return true;
 }
 
+void workspace_update_fullscreen_stacking(struct workspace* ws) {
+    if (!ws)
+        return;
+
+    if (ws->views.fullscreen) {
+        wlr_scene_node_raise_to_top(&ws->TREE->node);
+    } else {
+        wlr_scene_node_lower_to_bottom(&ws->TREE->node);
+    }
+}
+
 void workspace_try_remove(struct workspace* ws) {
     if (is_workspace_empty(ws)) {
         ws->col->levels[ws->level] = NULL;
@@ -185,12 +196,13 @@ void column_try_remove(struct liars_server* server, struct column* col) {
 }
 
 void workspace_set_fullscreen(struct view* view) {
-    wlr_scene_node_raise_to_top(&view->scene_tree->node);
     wlr_scene_node_set_position(&view->scene_tree->node, 0, 0);
     wlr_scene_node_reparent(&view->scene_tree->node,
                             view->workspace->views.layer_fullscreen);
+    wlr_scene_node_raise_to_top(&view->scene_tree->node);
     view->workspace->views.fullscreen = view;
     // workspace_arrange(view->workspace);
+    workspace_update_fullscreen_stacking(view->workspace);
 }
 
 // perhaps remove would be a better name, but if youre coming from set, unset is
@@ -199,6 +211,8 @@ void workspace_unset_fullscreen(struct workspace* ws, struct view* view) {
     ws->views.fullscreen = NULL;
     wlr_scene_node_reparent(&view->scene_tree->node,
                             view->workspace->views.layer_tiled);
+
+    workspace_update_fullscreen_stacking(view->workspace);
     workspace_arrange(ws);
 }
 

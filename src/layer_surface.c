@@ -21,6 +21,16 @@ static bool layer_has_exclusive_keyboard(struct wlr_layer_surface_v1* layer) {
     return t;
 }
 
+static void layer_surface_restack(struct layer_surface* ls) {
+    struct workspace* ws = get_active_workspace(ls->server);
+    if (!ws || !ws->views.fullscreen)
+        return;
+    if (ws->col->monitor != ls->monitor)
+        return;
+
+    wlr_scene_node_raise_to_top(&ls->scene->tree->node);
+}
+
 static void layer_surface_commit(struct wl_listener* listener, void* data) {
     struct layer_surface* ls = wl_container_of(listener, ls, commit);
     struct wlr_layer_surface_v1* layer_surface = ls->wlr_layer_surface;
@@ -35,6 +45,7 @@ static void layer_surface_commit(struct wl_listener* listener, void* data) {
 static void layer_surface_map(struct wl_listener* listener, void* data) {
     struct layer_surface* ls = wl_container_of(listener, ls, map);
     struct wlr_layer_surface_v1* layer_surface = ls->wlr_layer_surface;
+    layer_surface_restack(ls);
 
     // TODO: Prevent focus change when exclusive keyboard
     // Meaning, if the layer surface has exclusive surface, focus_view shouldn't
@@ -102,6 +113,7 @@ void server_new_layer_shell_surface(struct wl_listener* listener, void* data) {
 
     ls->scene = wlr_scene_layer_surface_v1_create(&server->scene->tree,
                                                   wlr_layer_surface);
+    layer_surface_restack(ls); // unnecessary, just to make sure
 
     ls->commit.notify = layer_surface_commit;
     wl_signal_add(&wlr_layer_surface->surface->events.commit, &ls->commit);

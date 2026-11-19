@@ -92,13 +92,16 @@ void switch_to_workspace(struct liars_server* server, struct workspace* new) {
         return;
 
     if (old) {
-        workspace_try_remove(old);
+        workspace_update_fullscreen_stacking(old);
         wlr_scene_node_set_enabled(&old->TREE->node, false);
-        column_try_remove(server, old->col);
+        struct column* col = old->col;
+        workspace_try_remove(old);
+        column_try_remove(server, col);
     }
     if (new->needs_arrange) {
         workspace_arrange(new);
     }
+    workspace_update_fullscreen_stacking(new);
     wlr_scene_node_set_enabled(&new->TREE->node, true);
     server->active_workspace = new;
     focus_view_under_cursor(server);

@@ -49,6 +49,7 @@ struct workspace* column_get_offset_level(struct column* col, int offset);
 void workspace_send_to_column(struct workspace* ws, struct column* target_col);
 
 void workspace_try_remove(struct workspace* ws);
+void workspace_update_fullscreen_stacking(struct workspace* ws);
 
 bool column_is_level_valid(int level);
 
