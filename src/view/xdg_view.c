@@ -23,17 +23,6 @@ struct xdg_view {
     uint32_t pending_configure_serial;
 };
 
-struct xdg_popup {
-    struct xdg_view* parent_view;
-    struct wlr_scene_tree* scene_tree;
-
-    struct wlr_xdg_popup* xdg_popup;
-    struct wl_listener commit;
-    struct wl_listener destroy;
-    struct wl_listener reposition;
-    struct wl_listener new_popup;
-};
-
 static void xdg_view_set_size(struct view* v, int w, int h) {
     struct xdg_view* xv = XDG_VIEW(v);
 
@@ -319,15 +308,24 @@ void server_new_xdg_toplevel(struct wl_listener* listener, void* data) {
 
 static void xdg_popup_unconstrain(struct xdg_popup* popup) {
     struct wlr_xdg_popup* xdg_popup = popup->xdg_popup;
-    struct monitor* monitor = popup->parent_view->base.workspace->col->monitor;
+    struct monitor* monitor =
+        popup->parent_view ? popup->parent_view->workspace->col->monitor
+                           : get_active_workspace(popup->server)->col->monitor;
     struct wlr_box constraint_box;
 
-    struct wlr_scene_tree* tree = popup->parent_view->surface_tree;
-    int toplevel_global_x = 0, toplevel_global_y = 0;
-    wlr_scene_node_coords(&tree->node, &toplevel_global_x, &toplevel_global_y);
+    double root_global_x = 0, root_global_y = 0;
+    if (popup->parent_view) {
+        popup->parent_view->impl->get_surface_layout_pos(
+            popup->parent_view, &root_global_x, &root_global_y);
+    } else {
+        int x = 0, y = 0;
+        wlr_scene_node_coords(&popup->root_tree->node, &x, &y);
+        root_global_x = x;
+        root_global_y = y;
+    }
 
-    constraint_box.x = monitor->box.x - toplevel_global_x;
-    constraint_box.y = monitor->box.y - toplevel_global_y;
+    constraint_box.x = monitor->box.x - (int)root_global_x;
+    constraint_box.y = monitor->box.y - (int)root_global_y;
     constraint_box.width = monitor->box.width;
     constraint_box.height = monitor->box.height;
     wlr_xdg_popup_unconstrain_from_box(xdg_popup, &constraint_box);
@@ -353,43 +351,32 @@ static void xdg_popup_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&popup->commit.link);
     wl_list_remove(&popup->destroy.link);
     wl_list_remove(&popup->reposition.link);
-    wl_list_remove(&popup->new_popup.link);
 
     free(popup);
 }
 
-void server_new_xdg_popup(struct wl_listener* listener, void* data) {
-    struct wlr_xdg_popup* wlr_xdg_popup = data;
-    if (!wlr_xdg_popup->parent)
-        return; // ignore layer surface popups, handled elsewhere
-
+void xdg_popup_create(struct wlr_xdg_popup* wlr_xdg_popup,
+                      struct wlr_scene_tree* parent_tree,
+                      struct wlr_scene_tree* root_tree,
+                      struct view* parent_view, struct liars_server* server) {
     struct xdg_popup* popup = calloc(1, sizeof(*popup));
+    if (!popup)
+        return;
+
+    popup->server = server;
+    popup->parent_view = parent_view;
+    popup->root_tree = root_tree;
     popup->xdg_popup = wlr_xdg_popup;
 
-    struct wlr_xdg_surface* parent =
-        wlr_xdg_surface_try_from_wlr_surface(wlr_xdg_popup->parent);
-
-    if (!parent) {
-        wlr_log(WLR_ERROR, "Xdg popup has no parent!");
+    struct wlr_scene_tree* scene_tree =
+        wlr_scene_xdg_surface_create(parent_tree, wlr_xdg_popup->base);
+    if (!scene_tree) {
+        wlr_log(WLR_ERROR, "Failed to create popup scene tree");
         free(popup);
         return;
     }
-
-    struct wlr_scene_tree* parent_tree = NULL;
-    if (parent->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-        popup->parent_view = parent->data;
-        parent_tree = popup->parent_view->surface_tree;
-
-    } else if (parent->role == WLR_XDG_SURFACE_ROLE_POPUP) {
-        struct xdg_popup* parent_popup = parent->data;
-        popup->parent_view = parent_popup->parent_view;
-        parent_tree = parent_popup->scene_tree;
-    }
-
+    popup->scene_tree = scene_tree;
     wlr_xdg_popup->base->data = popup;
-
-    popup->scene_tree =
-        wlr_scene_xdg_surface_create(parent_tree, wlr_xdg_popup->base);
 
     popup->commit.notify = xdg_popup_commit;
     wl_signal_add(&wlr_xdg_popup->base->surface->events.commit, &popup->commit);
@@ -399,7 +386,46 @@ void server_new_xdg_popup(struct wl_listener* listener, void* data) {
 
     popup->reposition.notify = xdg_popup_reposition;
     wl_signal_add(&wlr_xdg_popup->events.reposition, &popup->reposition);
+}
 
-    popup->new_popup.notify = server_new_xdg_popup;
-    wl_signal_add(&wlr_xdg_popup->base->events.new_popup, &popup->new_popup);
+void server_new_xdg_popup(struct wl_listener* listener, void* data) {
+    struct liars_server* server =
+        wl_container_of(listener, server, new_xdg_popup);
+    struct wlr_xdg_popup* wlr_xdg_popup = data;
+    if (!wlr_xdg_popup->parent)
+        return; // layer surface popups are handled by their layer surface
+
+    struct wlr_xdg_surface* parent =
+        wlr_xdg_surface_try_from_wlr_surface(wlr_xdg_popup->parent);
+    if (!parent) {
+        wlr_log(WLR_ERROR, "Xdg popup has no parent!");
+        return;
+    }
+
+    struct wlr_scene_tree* parent_tree = NULL;
+    struct wlr_scene_tree* root_tree = NULL;
+    struct view* parent_view = NULL;
+    if (parent->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+        struct xdg_view* parent_xdg_view = parent->data;
+        if (parent_xdg_view) {
+            parent_view = &parent_xdg_view->base;
+            parent_tree = parent_xdg_view->surface_tree;
+            root_tree = parent_xdg_view->surface_tree;
+        }
+    } else if (parent->role == WLR_XDG_SURFACE_ROLE_POPUP) {
+        struct xdg_popup* parent_popup = parent->data;
+        if (parent_popup) {
+            parent_view = parent_popup->parent_view;
+            parent_tree = parent_popup->scene_tree;
+            root_tree = parent_popup->root_tree;
+        }
+    }
+
+    if (!parent_tree || !root_tree) {
+        wlr_log(WLR_ERROR, "Xdg popup has no usable parent tree!");
+        return;
+    }
+
+    xdg_popup_create(wlr_xdg_popup, parent_tree, root_tree, parent_view,
+                     server);
 }

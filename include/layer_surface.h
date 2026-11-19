@@ -10,7 +10,6 @@ struct layer_surface {
     struct wlr_scene_layer_surface_v1* scene;
     struct liars_server* server;
     struct monitor* monitor;
-    struct wlr_scene_tree* popups_tree;
 
     uint32_t current_exclusive_zone;
 

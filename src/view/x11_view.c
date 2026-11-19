@@ -15,6 +15,7 @@ struct unmanaged_x11 {
     struct wlr_xwayland_surface* xsurface;
     struct wlr_scene_tree* scene_tree;
     struct liars_server* server;
+    bool associated;
     struct wl_listener associate;
     struct wl_listener dissociate;
     struct wl_listener map;
@@ -46,6 +47,13 @@ static void unmanaged_x11_destroy(struct wl_listener* listener, void* data) {
     struct unmanaged_x11* unmanaged =
         wl_container_of(listener, unmanaged, destroy);
 
+    if (unmanaged->associated) {
+        wl_list_remove(&unmanaged->map.link);
+        wl_list_remove(&unmanaged->unmap.link);
+    }
+    if (unmanaged->scene_tree)
+        wlr_scene_node_destroy(&unmanaged->scene_tree->node);
+
     wl_list_remove(&unmanaged->associate.link);
     wl_list_remove(&unmanaged->dissociate.link);
     wl_list_remove(&unmanaged->destroy.link);
@@ -74,6 +82,7 @@ static void unmanaged_x11_associate(struct wl_listener* listener, void* data) {
     wl_signal_add(&unmanaged->xsurface->surface->events.map, &unmanaged->map);
     wl_signal_add(&unmanaged->xsurface->surface->events.unmap,
                   &unmanaged->unmap);
+    unmanaged->associated = true;
 }
 
 static void unmanaged_x11_dissociate(struct wl_listener* listener, void* data) {
@@ -81,6 +90,7 @@ static void unmanaged_x11_dissociate(struct wl_listener* listener, void* data) {
         wl_container_of(listener, unmanaged, dissociate);
     wl_list_remove(&unmanaged->map.link);
     wl_list_remove(&unmanaged->unmap.link);
+    unmanaged->associated = false;
 }
 
 static void handle_unmanaged_x11(struct liars_server* server,
