@@ -22,7 +22,7 @@ keys = "Super+Q"
 action = "close"
 
 [[keybind]]
-keys = "Super+Shift+Space"
+keys = "Super+Space"
 action = "spawn"
 args = "rofi -show drun"
 
@@ -116,7 +116,7 @@ action = "workspace"
 args = "d"
 
 [[keybind]]
-keys = "Super+Space"
+keys = "Super+Shift+Space"
 action = "spawn"
 args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspace {}"
 

@@ -266,6 +266,26 @@ static bool x11_view_want_maximized(struct view* v) {
     return x11_v->xsurface->maximized_horz && x11_v->xsurface->maximized_vert;
 }
 
+static bool x11_view_want_floating(struct view* v) {
+    struct x11_view* x11_v = X11_VIEW(v);
+    if (x11_v->xsurface->parent != NULL || x11_v->xsurface->modal)
+        return true;
+
+    static const enum wlr_xwayland_net_wm_window_type dialog_types[] = {
+        WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG,
+        WLR_XWAYLAND_NET_WM_WINDOW_TYPE_SPLASH,
+        WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NOTIFICATION,
+        WLR_XWAYLAND_NET_WM_WINDOW_TYPE_UTILITY,
+    };
+    for (size_t i = 0; i < sizeof(dialog_types) / sizeof(dialog_types[0]);
+         i++) {
+        if (wlr_xwayland_surface_has_window_type(x11_v->xsurface,
+                                                 dialog_types[i]))
+            return true;
+    }
+    return false;
+}
+
 static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
     struct x11_view* x11_view = X11_VIEW(v);
     v->is_fullscreen = fullscreen;
@@ -311,6 +331,7 @@ static const struct view_impl x11_view_impl = {
     .get_app_id = x11_view_get_app_id,
     .want_fullscreen = x11_view_want_fullscreen,
     .want_maximized = x11_view_want_maximized,
+    .want_floating = x11_view_want_floating,
     .get_surface = x11_view_get_surface,
     .set_fullscreen = x11_view_set_fullscreen,
     .set_maximized = x11_view_set_maximized,

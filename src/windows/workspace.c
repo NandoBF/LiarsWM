@@ -208,6 +208,17 @@ void workspace_spawn(struct workspace* ws, struct view* view) {
     }
 
     view->workspace = ws;
+
+    if (view->impl->want_floating && view->impl->want_floating(view)) {
+        wlr_log(WLR_DEBUG, "Spawning dialog window as floating");
+        view->is_floating = true;
+        wl_list_insert(&ws->views.floating, &view->link);
+        wlr_scene_node_reparent(&view->scene_tree->node,
+                                ws->views.layer_floating);
+        view_move_to_center(view);
+        return;
+    }
+
     wlr_scene_node_reparent(&view->scene_tree->node, ws->views.layer_tiled);
     wl_list_insert(&view->workspace->views.tiles, &view->link);
     workspace_arrange(ws);

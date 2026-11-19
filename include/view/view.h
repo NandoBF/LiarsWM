@@ -62,6 +62,7 @@ struct view_impl {
     const char* (*get_app_id)(struct view* v);
     bool (*want_fullscreen)(struct view* v);
     bool (*want_maximized)(struct view* v);
+    bool (*want_floating)(struct view* v);
     struct wlr_surface* (*get_surface)(struct view* v);
     void (*set_fullscreen)(struct view* v, bool fullscreen);
     void (*set_maximized)(struct view* v, bool maximized);
@@ -84,6 +85,7 @@ void view_set_app_id(struct wl_listener* listener, void* data);
 bool view_ensure_capture_source(struct view* view);
 void view_release_capture(struct view* view);
 
+void view_move_to_center(struct view* view);
 void view_set_floating(struct view* view, bool floating);
 void view_set_fullscreen(struct view* view, bool fullscreen);
 void view_set_maximized(struct view* view, bool maximized);

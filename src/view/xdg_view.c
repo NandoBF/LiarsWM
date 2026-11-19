@@ -197,6 +197,12 @@ static bool xdg_view_want_maximized(struct view* v) {
     return xv->toplevel->requested.maximized == true;
 }
 
+static bool xdg_view_want_floating(struct view* v) {
+    struct xdg_view* xv = XDG_VIEW(v);
+    // Dialogs declare their owning toplevel through xdg_toplevel.set_parent
+    return xv->toplevel->parent != NULL;
+}
+
 static struct wlr_surface* xdg_view_get_surface(struct view* v) {
     struct xdg_view* xv = XDG_VIEW(v);
     return xv->toplevel->base->surface;
@@ -248,6 +254,7 @@ static const struct view_impl xdg_view_impl = {
     .get_app_id = xdg_view_get_app_id,
     .want_fullscreen = xdg_view_want_fullscreen,
     .want_maximized = xdg_view_want_maximized,
+    .want_floating = xdg_view_want_floating,
     .get_surface = xdg_view_get_surface,
     .set_fullscreen = xdg_view_set_fullscreen,
     .set_maximized = xdg_view_set_maximized,
