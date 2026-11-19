@@ -36,8 +36,8 @@ void view_move_to_center(struct view* view) {
     struct monitor* monitor = view_get_monitor(view);
     struct wlr_box box;
     view->impl->get_geometry(view, &box);
-    int x = (monitor->output->width - box.width) / 2;
-    int y = (monitor->output->height - box.height) / 2;
+    int x = monitor->usable.x + (monitor->usable.width - box.width) / 2;
+    int y = monitor->usable.y + (monitor->usable.height - box.height) / 2;
     wlr_scene_node_set_position(&view->scene_tree->node, x, y);
 }
 

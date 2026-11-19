@@ -293,8 +293,8 @@ static void x11_view_set_fullscreen(struct view* v, bool fullscreen) {
     view_set_fullscreen(v, fullscreen);
     if (fullscreen) {
         struct monitor* monitor = v->workspace->col->monitor;
-        x11_view->base.impl->set_size(v, monitor->output->width,
-                                      monitor->output->height);
+        x11_view->base.impl->set_size(v, monitor->box.width,
+                                      monitor->box.height);
     }
 }
 
