@@ -3,7 +3,6 @@ command = "waybar"
 
 [general]
 
-
 [general.appearance]
 inner_gaps = 3
 outer_gaps = 5
@@ -34,11 +33,6 @@ action = "fullscreen"
 keys = "Mod+%d"
 action = "workspace"
 args = "%d"
-
-[[keybind]]
-keys = "Super+Alt+2"
-action = "workspacesend"
-args = "2"
 
 [[keybind]]
 keys = "Super+z"
@@ -116,11 +110,48 @@ action = "workspace"
 args = "d"
 
 [[keybind]]
-keys = "Super+Shift+Space"
-action = "spawn"
-args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspace {}"
+keys = "Super+Shift+1"
+action = "workspacesend"
+args = "1"
 
 [[keybind]]
-keys = "Super+Alt+Space"
-action = "spawn"
-args = "fuzzel -d --anchor bottom-left --y-margin 5 --x-margin 5 -l 0 | xargs -I {} /home/nabattis/Documents/Projects/liarswm/build/liarsctl workspacesend {}"
+keys = "Super+Shift+2"
+action = "workspacesend"
+args = "2"
+[[keybind]]
+keys = "Super+Shift+3"
+action = "workspacesend"
+args = "3"
+[[keybind]]
+keys = "Super+Shift+4"
+action = "workspacesend"
+args = "4"
+[[keybind]]
+keys = "Super+Shift+5"
+action = "workspacesend"
+args = "5"
+[[keybind]]
+keys = "Super+Shift+6"
+action = "workspacesend"
+args = "6"
+[[keybind]]
+keys = "Super+Shift+7"
+action = "workspacesend"
+args = "7"
+[[keybind]]
+keys = "Super+Shift+8"
+action = "workspacesend"
+args = "8"
+[[keybind]]
+keys = "Super+Shift+9"
+action = "workspacesend"
+args = "9"
+[[keybind]]
+keys = "Super+Shift+0"
+action = "workspacesend"
+args = "0"
+
+[[keybind]]
+keys = "Super+Shift+d"
+action = "workspacesend"
+args = "d"
