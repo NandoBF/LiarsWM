@@ -240,6 +240,26 @@ static void seat_request_start_drag(struct wl_listener* listener, void* data) {
     }
 }
 
+// TODO: Track touch drags
+static void seat_start_drag(struct wl_listener* listener, void* data) {
+    struct liars_seat* seat = wl_container_of(listener, seat, start_drag);
+    struct wlr_drag* drag = data;
+    if (!drag->icon)
+        return;
+
+    struct liars_server* server = seat->server;
+    struct wlr_scene_tree* tree = server->drag_icon_tree;
+    if (!tree)
+        return;
+
+    wlr_scene_node_raise_to_top(&tree->node);
+    if (server->cursor) {
+        wlr_scene_node_set_position(&tree->node, (int)server->cursor->cursor->x,
+                                    (int)server->cursor->cursor->y);
+    }
+    wlr_scene_drag_icon_create(tree, drag->icon);
+}
+
 void seat_destroy_keyboards(struct liars_seat* seat) {
     struct liars_keyboard* kb;
     struct liars_keyboard* tmp;
@@ -261,6 +281,7 @@ void seat_destroy(struct wl_listener* listener, void* data) {
     wl_list_remove(&seat->pointer_focus_change.link);
     wl_list_remove(&seat->request_set_selection.link);
     wl_list_remove(&seat->request_start_drag.link);
+    wl_list_remove(&seat->start_drag.link);
     wl_list_remove(&seat->new_input.link);
 
     wl_list_remove(&seat->pointer_grab_begin.link);
@@ -336,6 +357,9 @@ struct liars_seat* create_seat(struct liars_server* server) {
     seat->request_start_drag.notify = seat_request_start_drag;
     wl_signal_add(&seat->seat->events.request_start_drag,
                   &seat->request_start_drag);
+
+    seat->start_drag.notify = seat_start_drag;
+    wl_signal_add(&seat->seat->events.start_drag, &seat->start_drag);
 
     seat->pointer_constraints = create_pointer_constraints(seat);
 
@@ -478,6 +502,14 @@ static void process_cursor_resize(struct liars_cursor* cursor) {
 
 // TODO: Add supress motion
 static void process_cursor_motion(struct liars_cursor* cursor, uint32_t time) {
+    struct wlr_scene_tree* drag_icon_tree =
+        cursor->seat->server->drag_icon_tree;
+    if (drag_icon_tree) {
+        wlr_scene_node_set_position(&drag_icon_tree->node,
+                                    (int)cursor->cursor->x,
+                                    (int)cursor->cursor->y);
+    }
+
     if (cursor->cursor_mode == LIARSWM_CURSOR_MOVE) {
         process_cursor_move(cursor);
         return;

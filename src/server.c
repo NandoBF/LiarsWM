@@ -163,9 +163,17 @@ struct view* desktop_view_at(struct liars_server* server, double lx, double ly,
                              struct wlr_surface** surface, double* sx,
                              double* sy) {
 
-    double _sx, _sy;
-    struct wlr_scene_node* node =
-        wlr_scene_node_at(&server->scene->tree.node, lx, ly, &_sx, &_sy);
+    double _sx = 0, _sy = 0;
+    struct wlr_scene_node* node = NULL;
+    struct wlr_scene_node* child;
+    wl_list_for_each_reverse(child, &server->scene->tree.children, link) {
+        if (server->drag_icon_tree && child == &server->drag_icon_tree->node) {
+            continue;
+        }
+        node = wlr_scene_node_at(child, lx, ly, &_sx, &_sy);
+        if (node)
+            break;
+    }
 
     if (sx)
         *sx = _sx;
@@ -336,6 +344,8 @@ int init_liar_server(struct liars_server* server,
     server->scene = wlr_scene_create();
     server->scene_layout =
         wlr_scene_attach_output_layout(server->scene, server->output_layout);
+
+    server->drag_icon_tree = wlr_scene_tree_create(&server->scene->tree);
 
     server->xdg_activation = wlr_xdg_activation_v1_create(server->wl_display);
     if (!server->xdg_activation) {
