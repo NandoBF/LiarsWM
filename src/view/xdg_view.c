@@ -44,6 +44,14 @@ static void xdg_view_set_size(struct view* v, int w, int h) {
         wlr_xdg_toplevel_set_size(xv->toplevel, view_width, view_height);
 }
 
+static bool xdg_view_geometry_is_current(struct view* v) {
+    struct xdg_view* xv = XDG_VIEW(v);
+    uint32_t serial = xv->pending_configure_serial;
+
+    return serial == 0 ||
+           xv->toplevel->base->current.configure_serial >= serial;
+}
+
 static void xdg_toplevel_map(struct wl_listener* listener, void* data) {
     struct view* view = wl_container_of(listener, view, map);
 
@@ -74,6 +82,8 @@ static void xdg_toplevel_commit(struct wl_listener* listener, void* data) {
     if (xv->toplevel->base->initial_commit) {
         wlr_xdg_toplevel_set_size(xv->toplevel, 0, 0);
     }
+
+    view_apply_pending_move(view);
 }
 
 static void xdg_toplevel_destroy(struct wl_listener* listener, void* data) {
@@ -238,6 +248,7 @@ static const struct view_impl xdg_view_impl = {
     .get_geometry = xdg_view_get_geometry,
     .get_surface_layout_pos = xdg_view_get_surface_layout_pos,
     .set_size = xdg_view_set_size,
+    .geometry_is_current = xdg_view_geometry_is_current,
     .set_activated = xdg_view_set_activated,
     .close = xdg_view_close,
     .get_title = xdg_view_get_title,

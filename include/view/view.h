@@ -13,6 +13,12 @@ struct liars_server;
 struct liars_seat;
 struct workspace;
 
+enum view_move_type {
+    VIEW_MOVE_NONE,
+    VIEW_MOVE_CENTER,
+    VIEW_MOVE_TO_POINT,
+};
+
 struct view {
     struct wl_list link;
     struct wl_list flink;
@@ -44,6 +50,10 @@ struct view {
     bool is_fullscreen;
     bool is_floating;
     bool is_maximized;
+    struct {
+        enum view_move_type type;
+        int x, y;
+    } pending_move;
     struct wlr_box saved_geometry; // geometry before maximize
 
     struct wlr_ext_foreign_toplevel_handle_v1* toplevel_handle;
@@ -56,6 +66,7 @@ struct view_impl {
     void (*get_geometry)(struct view* v, struct wlr_box* box);
     void (*get_surface_layout_pos)(struct view* v, double* x, double* y);
     void (*set_size)(struct view* v, int width, int height);
+    bool (*geometry_is_current)(struct view* v);
     void (*set_activated)(struct view* v, bool activated);
     void (*close)(struct view* v);
     const char* (*get_title)(struct view* v);
@@ -85,7 +96,10 @@ void view_set_app_id(struct wl_listener* listener, void* data);
 bool view_ensure_capture_source(struct view* view);
 void view_release_capture(struct view* view);
 
-void view_move_to_center(struct view* view);
+void view_queue_move_to_center(struct view* view);
+void view_queue_move_to_point(struct view* view, int x, int y);
+void view_apply_pending_move(struct view* view);
+void view_cancel_pending_move(struct view* view);
 void view_set_floating(struct view* view, bool floating);
 void view_set_fullscreen(struct view* view, bool fullscreen);
 void view_set_maximized(struct view* view, bool maximized);

@@ -266,6 +266,12 @@ static void x11_view_set_size(struct view* v, int w, int h) {
                                    view_height);
 }
 
+static bool x11_view_geometry_is_current(struct view* v) {
+    // wlr_xwayland_surface_configure() updates the surface geometry
+    // immediately.
+    return true;
+}
+
 static bool x11_view_want_fullscreen(struct view* v) {
     struct x11_view* x11_v = X11_VIEW(v);
     return x11_v->xsurface->fullscreen;
@@ -336,6 +342,7 @@ static const struct view_impl x11_view_impl = {
     .get_geometry = x11_view_get_geometry,
     .get_surface_layout_pos = x11_view_get_surface_layout_pos,
     .set_size = x11_view_set_size,
+    .geometry_is_current = x11_view_geometry_is_current,
     .set_activated = x11_view_set_activated,
     .close = x11_view_close,
     .get_title = x11_view_get_title,

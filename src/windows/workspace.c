@@ -231,7 +231,7 @@ void workspace_spawn(struct workspace* ws, struct view* view) {
         wl_list_insert(&ws->views.floating, &view->link);
         wlr_scene_node_reparent(&view->scene_tree->node,
                                 ws->views.layer_floating);
-        view_move_to_center(view);
+        view_queue_move_to_center(view);
         return;
     }
 

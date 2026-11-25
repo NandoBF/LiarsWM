@@ -32,13 +32,66 @@ struct monitor* view_get_monitor(struct view* view) {
     return view->workspace->col->monitor;
 }
 
-void view_move_to_center(struct view* view) {
+static void view_move_to_point(struct view* view, int x, int y) {
+    wlr_scene_node_set_position(&view->scene_tree->node, x, y);
+}
+
+static void view_move_to_center(struct view* view) {
     struct monitor* monitor = view_get_monitor(view);
     struct wlr_box box;
     view->impl->get_geometry(view, &box);
     int x = monitor->usable.x + (monitor->usable.width - box.width) / 2;
     int y = monitor->usable.y + (monitor->usable.height - box.height) / 2;
-    wlr_scene_node_set_position(&view->scene_tree->node, x, y);
+    view_move_to_point(view, x, y);
+}
+
+void view_cancel_pending_move(struct view* view) {
+    view->pending_move.type = VIEW_MOVE_NONE;
+    view->pending_move.x = 0;
+    view->pending_move.y = 0;
+}
+
+void view_queue_move_to_center(struct view* view) {
+    view_cancel_pending_move(view);
+    view->pending_move.type = VIEW_MOVE_CENTER;
+    view_apply_pending_move(view);
+}
+
+void view_queue_move_to_point(struct view* view, int x, int y) {
+    view_cancel_pending_move(view);
+    view->pending_move.type = VIEW_MOVE_TO_POINT;
+    view->pending_move.x = x;
+    view->pending_move.y = y;
+    view_apply_pending_move(view);
+}
+
+void view_apply_pending_move(struct view* view) {
+    if (view->pending_move.type == VIEW_MOVE_NONE)
+        return;
+    if (!view->mapped) {
+        view_cancel_pending_move(view);
+        return;
+    }
+    if (!view->impl->geometry_is_current ||
+        !view->impl->geometry_is_current(view)) {
+        return;
+    }
+
+    enum view_move_type move = view->pending_move.type;
+    int x = view->pending_move.x;
+    int y = view->pending_move.y;
+    view_cancel_pending_move(view);
+
+    switch (move) {
+    case VIEW_MOVE_CENTER:
+        view_move_to_center(view);
+        break;
+    case VIEW_MOVE_TO_POINT:
+        view_move_to_point(view, x, y);
+        break;
+    case VIEW_MOVE_NONE:
+        break;
+    }
 }
 
 void focus_view(struct view* view) {
@@ -274,11 +327,15 @@ void view_set_floating(struct view* view, bool floating) {
     view->is_floating = floating;
     wl_list_remove(&view->link);
     if (floating) {
+        struct monitor* monitor = view_get_monitor(view);
         wl_list_insert(&view->workspace->views.floating, &view->link);
         wlr_scene_node_reparent(&view->scene_tree->node,
                                 view->workspace->views.layer_floating);
-        view_move_to_center(view);
+        view->impl->set_size(view, monitor->usable.width / 1.5,
+                             monitor->usable.height / 1.5);
+        view_queue_move_to_center(view);
     } else {
+        view_cancel_pending_move(view);
         wl_list_insert(&view->workspace->views.tiles, &view->link);
         wlr_scene_node_reparent(&view->scene_tree->node,
                                 view->workspace->views.layer_tiled);
@@ -289,6 +346,7 @@ void view_set_floating(struct view* view, bool floating) {
 void view_set_fullscreen(struct view* view, bool fullscreen) {
     if (view->is_fullscreen == fullscreen)
         return;
+
     if (fullscreen && view->is_maximized)
         view_set_maximized(view, false);
 
@@ -304,6 +362,7 @@ void view_set_fullscreen(struct view* view, bool fullscreen) {
         workspace_unset_fullscreen(view->workspace, view);
     }
     view_borders_set_enabled(view, !fullscreen);
+    view_cancel_pending_move(view);
     // focus_view_under_cursor(view->server); // FIX:
 }
 
@@ -344,6 +403,8 @@ void view_set_maximized(struct view* view, bool maximized) {
         view->impl->set_size(view, view->saved_geometry.width,
                              view->saved_geometry.height);
     }
+
+    view_cancel_pending_move(view);
 
     if (view->impl->set_maximized)
         view->impl->set_maximized(view, maximized);
