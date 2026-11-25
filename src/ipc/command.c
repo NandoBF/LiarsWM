@@ -111,7 +111,6 @@ void command_send_to_workspace(struct liars_server* server, const char* command,
             wlr_log(WLR_INFO, "Sending to workspace: %s", command);
             struct workspace* target_ws = column_get_or_create_level(col, 0);
             send_to_workspace(target_ws, view);
-            focus_view_under_cursor(server);
             return;
         }
     }

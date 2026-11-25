@@ -78,6 +78,7 @@ void workspace_send_to_column(struct workspace* ws, struct column* target_col) {
             target_col->name, ws->level);
 }
 
+// Creates a workspace at column col with its root scene_tree disabled
 struct workspace* workspace_create_at_level(struct column* col, int level) {
     if (!column_is_level_valid(level))
         return NULL;
@@ -92,6 +93,7 @@ struct workspace* workspace_create_at_level(struct column* col, int level) {
     wl_list_init(&ws->views.tiles);
     wl_list_init(&ws->views.floating);
     ws->views.fullscreen = NULL;
+    wlr_scene_node_set_enabled(&ws->TREE->node, false);
 
     col->levels[level] = ws;
     ws->level = level;
