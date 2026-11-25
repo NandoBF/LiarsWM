@@ -2,3 +2,5 @@ build/
 .cache/
 liarswm.c
 main.c
+
+install.sh

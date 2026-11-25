@@ -1,4 +1,6 @@
-project('liarswm', 'c')
+project('liarswm', ['c'], 
+  version: '0.1.0',
+)
 
 wlroots = dependency('wlroots-0.20')
 wayland_server = dependency('wayland-server')
