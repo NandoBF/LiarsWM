@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ipc/command.h"
+#include <sys/types.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -57,6 +58,7 @@ struct liars_server {
 
     struct command_state cmd;
     struct ipc_server* ipc_server;
+    pid_t session_bus_pid;
 
     struct wlr_xwayland* xwayland;
     struct wl_listener new_xwayland_surface;

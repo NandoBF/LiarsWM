@@ -26,6 +26,10 @@ layer_shell_header = custom_target(
 
 subdir('src')
 
+install_data('liarswm-portals.conf',
+  install_dir: get_option('datadir') / 'xdg-desktop-portal',
+)
+
 executable(
   'liars',
   'liar.c',

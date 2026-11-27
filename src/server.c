@@ -12,8 +12,14 @@
 #include "windows/workspace.h"
 #include "wlr/types/wlr_xdg_decoration_v1.h"
 #include <bits/time.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -293,13 +299,270 @@ static void toplevel_capture_new_request(struct wl_listener* listener,
     }
 }
 
+#define SESSION_BUS_START_TIMEOUT_MS 5000
+#define SESSION_BUS_PID_FD 3
+
+static long long monotonic_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+static bool move_fd(int fd, int target) {
+    if (fd == target) {
+        int flags = fcntl(fd, F_GETFD);
+        return flags >= 0 && fcntl(fd, F_SETFD, flags & ~FD_CLOEXEC) >= 0;
+    }
+    return dup2(fd, target) >= 0;
+}
+
+static bool read_line_with_timeout(int fd, char* buf, size_t size,
+                                   long long deadline) {
+    size_t len = 0;
+    while (len < size - 1) {
+        long long remaining = deadline - monotonic_ms();
+        if (remaining <= 0)
+            return false;
+
+        struct pollfd pfd = {.fd = fd, .events = POLLIN};
+        int ready = poll(&pfd, 1, (int)remaining);
+        if (ready < 0) {
+            if (errno == EINTR)
+                continue;
+            return false;
+        }
+        if (ready == 0)
+            return false;
+
+        ssize_t n = read(fd, buf + len, size - 1 - len);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            return false;
+        }
+        if (n == 0)
+            break;
+
+        len += (size_t)n;
+        char* newline = memchr(buf, '\n', len);
+        if (newline) {
+            *newline = '\0';
+            return true;
+        }
+    }
+
+    buf[len] = '\0';
+    return false;
+}
+
+static bool wait_for_launcher(pid_t pid, int* status, long long deadline) {
+    for (;;) {
+        pid_t result = waitpid(pid, status, WNOHANG);
+        if (result == pid)
+            return true;
+        if (result < 0) {
+            if (errno == EINTR)
+                continue;
+            return false;
+        }
+        if (monotonic_ms() >= deadline) {
+            kill(pid, SIGKILL);
+            while (waitpid(pid, status, 0) < 0 && errno == EINTR) {
+            }
+            return false;
+        }
+        poll(NULL, 0, 10);
+    }
+}
+
+static void kill_session_bus(pid_t pid) {
+    if (pid > 1)
+        kill(pid, SIGTERM);
+}
+
+static void update_dbus_activation_environment(void) {
+    pid_t pid = fork();
+    if (pid < 0) {
+        wlr_log_errno(WLR_ERROR,
+                      "Failed to update D-Bus activation environment");
+        return;
+    }
+
+    if (pid == 0) {
+        sigset_t empty;
+        sigemptyset(&empty);
+        sigprocmask(SIG_SETMASK, &empty, NULL);
+
+        int devnull = open("/dev/null", O_RDWR);
+        if (devnull >= 0) {
+            dup2(devnull, STDIN_FILENO);
+            dup2(devnull, STDOUT_FILENO);
+            dup2(devnull, STDERR_FILENO);
+            if (devnull > STDERR_FILENO)
+                close(devnull);
+        }
+
+        execlp("dbus-update-activation-environment",
+               "dbus-update-activation-environment", "WAYLAND_DISPLAY",
+               "DISPLAY", "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP",
+               "XDG_SESSION_DESKTOP", "XDG_RUNTIME_DIR", "XAUTHORITY",
+               (char*)NULL);
+        _exit(127);
+    }
+
+    int status = 0;
+    long long deadline = monotonic_ms() + SESSION_BUS_START_TIMEOUT_MS;
+    if (!wait_for_launcher(pid, &status, deadline) || !WIFEXITED(status) ||
+        WEXITSTATUS(status) != 0) {
+        wlr_log(WLR_ERROR, "Failed to update D-Bus activation environment");
+    }
+}
+
+static pid_t ensure_session_bus(bool force_new_bus) {
+    const char* inherited_address = getenv("DBUS_SESSION_BUS_ADDRESS");
+    if (!force_new_bus && inherited_address && *inherited_address)
+        return 0;
+
+    int address_pipe[2];
+    int pid_pipe[2];
+    if (pipe2(address_pipe, O_CLOEXEC) != 0) {
+        wlr_log_errno(WLR_ERROR, "Failed to create D-Bus address pipe");
+        return 0;
+    }
+    if (pipe2(pid_pipe, O_CLOEXEC) != 0) {
+        wlr_log_errno(WLR_ERROR, "Failed to create D-Bus pid pipe");
+        close(address_pipe[0]);
+        close(address_pipe[1]);
+        return 0;
+    }
+
+    pid_t launcher = fork();
+    if (launcher < 0) {
+        wlr_log_errno(WLR_ERROR, "Failed to fork dbus-daemon");
+        close(address_pipe[0]);
+        close(address_pipe[1]);
+        close(pid_pipe[0]);
+        close(pid_pipe[1]);
+        return 0;
+    }
+
+    if (launcher == 0) {
+        close(address_pipe[0]);
+        close(pid_pipe[0]);
+
+        sigset_t empty;
+        sigemptyset(&empty);
+        sigprocmask(SIG_SETMASK, &empty, NULL);
+        setsid();
+
+        if (!move_fd(address_pipe[1], STDOUT_FILENO) ||
+            !move_fd(pid_pipe[1], SESSION_BUS_PID_FD))
+            _exit(127);
+        if (address_pipe[1] != STDOUT_FILENO)
+            close(address_pipe[1]);
+        if (pid_pipe[1] != SESSION_BUS_PID_FD)
+            close(pid_pipe[1]);
+
+        execlp("dbus-daemon", "dbus-daemon", "--session", "--fork",
+               "--print-address=1", "--print-pid=3", (char*)NULL);
+        _exit(127);
+    }
+
+    close(address_pipe[1]);
+    close(pid_pipe[1]);
+
+    char address[4096] = {0};
+    char pid_string[64] = {0};
+    long long deadline = monotonic_ms() + SESSION_BUS_START_TIMEOUT_MS;
+    bool have_address = read_line_with_timeout(address_pipe[0], address,
+                                               sizeof(address), deadline);
+    bool have_pid = read_line_with_timeout(pid_pipe[0], pid_string,
+                                           sizeof(pid_string), deadline);
+    close(address_pipe[0]);
+    close(pid_pipe[0]);
+
+    int status = 0;
+    bool launcher_ok = wait_for_launcher(launcher, &status, deadline);
+
+    char* end = NULL;
+    long bus_pid = have_pid ? strtol(pid_string, &end, 10) : 0;
+    if (!have_pid || end == pid_string || *end != '\0' || bus_pid <= 1)
+        bus_pid = 0;
+
+    if (!have_address || address[0] == '\0' || !launcher_ok ||
+        !WIFEXITED(status) || WEXITSTATUS(status) != 0 || bus_pid == 0) {
+        wlr_log(WLR_ERROR, "Failed to start session D-Bus");
+        kill_session_bus((pid_t)bus_pid);
+        return 0;
+    }
+
+    setenv("DBUS_SESSION_BUS_ADDRESS", address, true);
+    wlr_log(WLR_INFO, "Started session D-Bus at %s", address);
+    return (pid_t)bus_pid;
+}
+
+static bool runtime_dir_is_valid(const char* path) {
+    if (!path || !*path)
+        return false;
+
+    struct stat st;
+    if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
+        return false;
+    if (st.st_uid != getuid())
+        return false;
+    return (st.st_mode & (S_IRWXG | S_IRWXO)) == 0;
+}
+
+static void ensure_runtime_dir(void) {
+    const char* runtime = getenv("XDG_RUNTIME_DIR");
+    if (runtime_dir_is_valid(runtime))
+        return;
+
+    char user_runtime[64];
+    snprintf(user_runtime, sizeof(user_runtime), "/run/user/%u",
+             (unsigned)getuid());
+    if (runtime_dir_is_valid(user_runtime)) {
+        wlr_log(WLR_INFO, "XDG_RUNTIME_DIR was invalid; using %s",
+                user_runtime);
+        setenv("XDG_RUNTIME_DIR", user_runtime, true);
+        return;
+    }
+
+    char private_runtime[] = "/tmp/liarswm-runtime-XXXXXX";
+    char* dir = mkdtemp(private_runtime);
+    if (!dir) {
+        wlr_log_errno(WLR_ERROR, "Failed to create runtime directory");
+        return;
+    }
+    if (chmod(dir, 0700) != 0) {
+        wlr_log_errno(WLR_ERROR, "Failed to set runtime directory permissions");
+        rmdir(dir);
+        return;
+    }
+
+    wlr_log(WLR_INFO, "XDG_RUNTIME_DIR was invalid; using %s", dir);
+    setenv("XDG_RUNTIME_DIR", dir, true);
+}
+
+static void setup_session_environment(void) {
+    ensure_runtime_dir();
+    setenv("XDG_SESSION_TYPE", "wayland", true);
+    setenv("XDG_CURRENT_DESKTOP", "liarswm", true);
+    setenv("XDG_SESSION_DESKTOP", "liarswm", true);
+}
+
 int init_liar_server(struct liars_server* server,
                      enum wlr_log_importance log_level,
                      char* config_file_path) {
+    const char* outer_wayland = getenv("WAYLAND_DISPLAY");
+    const char* outer_display = getenv("DISPLAY");
+    bool nested_session =
+        (outer_wayland && *outer_wayland) || (outer_display && *outer_display);
 
     server->wl_display = wl_display_create();
     server->event_loop = wl_display_get_event_loop(server->wl_display);
     wlr_log_init(log_level, NULL);
+    setup_session_environment();
 
     server->backend = wlr_backend_autocreate(server->event_loop, NULL);
     if (server->backend == NULL) {
@@ -424,7 +687,8 @@ int init_liar_server(struct liars_server* server,
     // Seat
     struct liars_seat* seat = create_seat(server);
     server->seat = seat;
-    wlr_xwayland_set_seat(server->xwayland, seat->seat);
+    if (server->xwayland)
+        wlr_xwayland_set_seat(server->xwayland, seat->seat);
 
     struct liars_cursor* cursor = create_cursor(seat, server->output_layout);
     server->cursor = cursor;
@@ -434,6 +698,10 @@ int init_liar_server(struct liars_server* server,
         wlr_backend_destroy(server->backend);
         return 1;
     }
+    setenv("WAYLAND_DISPLAY", socket, true);
+
+    server->session_bus_pid = ensure_session_bus(!nested_session);
+    update_dbus_activation_environment();
 
     if (!wlr_backend_start(server->backend)) {
         wlr_backend_destroy(server->backend);
@@ -442,11 +710,13 @@ int init_liar_server(struct liars_server* server,
     }
 
     struct config* config = load_config(config_file_path);
+    if (!config) {
+        wlr_log(WLR_ERROR, "Failed to load config from: %s", config_file_path);
+        return 1;
+    }
     server->config = config;
 
     wlr_cursor_set_xcursor(cursor->cursor, cursor->cursor_manager, "default");
-
-    setenv("WAYLAND_DISPLAY", socket, true);
 
     server->ipc_server = ipc_server_create(server);
 
@@ -468,8 +738,13 @@ void server_cleanup(struct liars_server* server) {
     if (server->toplevel_capture)
         wl_list_remove(&server->toplevel_capture_new_request.link);
 
-    ipc_server_destroy(server->ipc_server);
-    server->ipc_server = NULL;
+    if (server->ipc_server) {
+        ipc_server_destroy(server->ipc_server);
+        server->ipc_server = NULL;
+    }
+
+    kill_session_bus(server->session_bus_pid);
+    server->session_bus_pid = 0;
 
     if (server->xwayland)
         wlr_xwayland_destroy(server->xwayland);

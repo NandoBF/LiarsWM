@@ -3,6 +3,9 @@
 #include "server.h"
 #include "ipc/ipc.h"
 #include "config.h"
+#include <signal.h>
+#include <string.h>
+#include <unistd.h>
 
 #define DEFAULT_CONFIG_LOC "./config/nested.toml"
 
@@ -26,6 +29,8 @@ int main(int argc, char* argv[]) {
 
     struct liars_server server = {0};
     if (init_liar_server(&server, WLR_DEBUG, config_file_path) != 0) {
+        if (server.session_bus_pid > 1)
+            kill(server.session_bus_pid, SIGTERM);
         return 1;
     }
     config_do_execs(&server, server.config);
