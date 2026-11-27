@@ -169,12 +169,18 @@ void config_destroy(struct config* config) {
 }
 
 void config_do_execs(struct liars_server* server, struct config* c) {
+    if (!c)
+        return;
+
     for (int i = 0; i < c->execs_count; i++) {
         command_spawn(server, c->execs[i], -1);
     }
 }
 
 void config_do_execs_once(struct liars_server* server, struct config* c) {
+    if (!c)
+        return;
+
     for (int i = 0; i < c->execs_once_count; i++) {
         command_spawn(server, c->execs_once[i], -1);
     }
